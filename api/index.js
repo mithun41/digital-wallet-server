@@ -17,6 +17,10 @@ const startServer = async () => {
     app.post("/api/register", registerUser);
     app.post("/api/login", loginUser);
 
+    app.get("/", (req, res) => {
+      res.send("🚀 Digital Wallet API is running...");
+    });
+
     const PORT = process.env.PORT || 5000;
     app.listen(PORT, () => console.log(`🚀 Server running on port ${PORT}`));
   } catch (err) {
