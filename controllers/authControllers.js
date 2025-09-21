@@ -1,32 +1,40 @@
 const bcrypt = require("bcryptjs");
 const jwt = require("jsonwebtoken");
-const { getDB } = require("../config/db");
+const { connectDB } = require("../config/db");
 
-const usersCollection = () => getDB().collection("users");
+// ✅ lazy users collection
+const usersCollection = async () => {
+  const db = await connectDB();
+  return db.collection("users");
+};
 
 const registerUser = async (req, res) => {
   try {
     const { name, phone, pin } = req.body;
-    if (!name || !phone || !pin)
+    if (!name || !phone || !pin) {
       return res.status(400).json({ message: "All fields are required" });
+    }
 
-    const existingUser = await usersCollection().findOne({ phone });
-    if (existingUser)
+    const users = await usersCollection();
+    const existingUser = await users.findOne({ phone });
+    if (existingUser) {
       return res.status(400).json({ message: "User already exists" });
+    }
 
     const hashedPin = await bcrypt.hash(pin, 10);
-    await usersCollection().insertOne({
+    await users.insertOne({
       name,
       phone,
       pin: hashedPin,
       createdAt: new Date(),
     });
 
-    res
-      .status(201)
-      .json({ message: "User registered successfully", user: { name, phone } });
+    res.status(201).json({
+      message: "User registered successfully",
+      user: { name, phone },
+    });
   } catch (error) {
-    console.error("Register error:", error); // 🔹 log error
+    console.error("Register error:", error);
     res.status(500).json({ message: error.message });
   }
 };
@@ -34,12 +42,16 @@ const registerUser = async (req, res) => {
 const loginUser = async (req, res) => {
   try {
     const { phone, pin } = req.body;
-    const user = await usersCollection().findOne({ phone });
-    if (!user) return res.status(400).json({ message: "Invalid phone or PIN" });
+    const users = await usersCollection();
+    const user = await users.findOne({ phone });
+    if (!user) {
+      return res.status(400).json({ message: "Invalid phone or PIN" });
+    }
 
     const isMatch = await bcrypt.compare(pin, user.pin);
-    if (!isMatch)
+    if (!isMatch) {
       return res.status(400).json({ message: "Invalid phone or PIN" });
+    }
 
     const token = jwt.sign(
       { id: user._id, phone: user.phone },
@@ -53,6 +65,7 @@ const loginUser = async (req, res) => {
       user: { name: user.name, phone: user.phone },
     });
   } catch (error) {
+    console.error("Login error:", error);
     res.status(500).json({ message: error.message });
   }
 };
