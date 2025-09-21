@@ -8,10 +8,20 @@ let db;
 
 const connectDB = async () => {
   if (db) return db; // singleton
-  if (!client) client = new MongoClient(process.env.MONGO_URI);
-  if (!client.isConnected?.()) await client.connect(); // ensure connected
+
+  if (!client) {
+    client = new MongoClient(process.env.MONGO_URI); // direct
+  }
+
+  try {
+    await client.connect(); // Vercel safe
+    console.log("✅ MongoDB connected");
+  } catch (err) {
+    console.error("❌ DB connection failed:", err);
+    throw err;
+  }
+
   db = client.db("digitalWalletDB");
-  console.log("MongoDB connected (Development)");
   return db;
 };
 
