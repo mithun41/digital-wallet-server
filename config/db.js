@@ -11,7 +11,7 @@ const connectDB = async () => {
   if (!client) client = new MongoClient(process.env.MONGO_URI);
   if (!client.isConnected?.()) await client.connect(); // ensure connected
   db = client.db("digitalWalletDB");
-  console.log("✅ MongoDB connected");
+  console.log("MongoDB connected (Development)");
   return db;
 };
 
