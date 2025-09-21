@@ -4,12 +4,19 @@ const sendManyCollaction = () => getDB().collection('sendMany')
 
 const createSendMany = async (req, res) => {
     try {
-        const data = req.body;
+        let data = req.body;
         if (!data || (Array.isArray(data) && data.length == 0))
             return res.status(400).json({ message: 'No Data Provider' })
-        const result = await sendManyCollaction().insertMany(
-            Array.isArray(data) ? data : [data]
-        )
+        if (!Array.isArray(data)) {
+            data = [data]
+        }
+        data = data.map(items => ({
+            ...items,
+            createdAt: new Date(),
+            status: 'Panding',
+            referenceId: Math.floor(Math.random() * 1000000000000)
+        }))
+        const result = await sendManyCollaction().insertMany(data);
         res.status(201).json({
             message: "Data saved successfully",
             insertedCount: result.insertedCount,
