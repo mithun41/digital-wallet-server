@@ -10,14 +10,15 @@ const app = express();
 app.use(cors());
 app.use(express.json());
 
-// DB connect
+// 🔹 Connect DB
 connectDB();
 
-// Routes
 app.use("/api", authRoutes);
 
 app.get("/", (req, res) => {
   res.send("🚀 Digital Wallet API is running...");
 });
 
-module.exports = app;
+app.listen(process.env.PORT || 5000, () => {
+  console.log(`Server running on port ${process.env.PORT || 5000}`);
+});

@@ -2,14 +2,19 @@ const { MongoClient } = require("mongodb");
 const dotenv = require("dotenv");
 dotenv.config();
 
-let db; // singleton
+let db;
 
 const connectDB = async () => {
-  if (db) return db; // already connected
-  const client = new MongoClient(process.env.MONGO_URI);
+  if (db) return db;
+
+  const uri = process.env.MONGO_URI;
+  if (!uri) throw new Error("MONGO_URI not found in .env");
+
+  const client = new MongoClient(uri);
   await client.connect();
+
   db = client.db("digitalWalletDB");
-  console.log("✅ MongoDB connected");
+  console.log("MongoDB connected (Development)");
   return db;
 };
 
