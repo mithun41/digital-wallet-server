@@ -2,7 +2,9 @@
 const bcrypt = require("bcryptjs");
 const jwt = require("jsonwebtoken");
 const { connectDB } = require("../config/db");
+const { ObjectId } = require("mongodb"); // ✅ এই লাইনটি যোগ করা হয়েছে
 
+// Lazy users collection
 const usersCollection = async () => {
   const db = await connectDB();
   return db.collection("users");
@@ -30,7 +32,6 @@ const registerUser = async (req, res) => {
       photo,
       createdAt: new Date(),
     };
-
     const result = await users.insertOne(newUser);
 
     // JWT generate
@@ -80,4 +81,24 @@ const loginUser = async (req, res) => {
   }
 };
 
-module.exports = { registerUser, loginUser };
+// ✅ Get current user
+const getMe = async (req, res) => {
+  try {
+    const token = req.headers.authorization?.split(" ")[1];
+    if (!token) return res.status(401).json({ message: "Unauthorized" });
+
+    const decoded = jwt.verify(token, process.env.JWT_SECRET);
+    const users = await usersCollection();
+    const user = await users.findOne({ _id: new ObjectId(decoded.id) });
+    if (!user) return res.status(404).json({ message: "User not found" });
+
+    res.json({
+      user: { name: user.name, phone: user.phone, photo: user.photo },
+    });
+  } catch (err) {
+    console.error("GetMe error:", err);
+    res.status(401).json({ message: "Invalid token" });
+  }
+};
+
+module.exports = { registerUser, loginUser, getMe };
