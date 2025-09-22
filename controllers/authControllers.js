@@ -101,7 +101,6 @@ const getMe = async (req, res) => {
   }
 };
 
-module.exports = { registerUser, loginUser, getMe };
 // ✅ Reset PIN
 const resetPin = async (req, res) => {
   try {
@@ -133,4 +132,4 @@ const resetPin = async (req, res) => {
   }
 };
 
-module.exports = { registerUser, loginUser, resetPin };
+module.exports = { registerUser, loginUser, getMe, resetPin };
