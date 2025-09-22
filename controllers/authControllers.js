@@ -80,5 +80,41 @@ const loginUser = async (req, res) => {
   }
 };
 
+// ✅ Reset PIN
+const resetPin = async (req, res) => {
+  try {
+    const { phone, oldPin, newPin } = req.body;
+    if (!phone || !oldPin || !newPin) {
+      return res.status(400).json({ message: "All fields are required" });
+    }
 
-module.exports = { registerUser, loginUser };
+    const users = await usersCollection();
+    const user = await users.findOne({ phone });
+    if (!user) {
+      return res.status(400).json({ message: "User not found" });
+    }
+
+    // Check old PIN
+    const isMatch = await bcrypt.compare(oldPin, user.pin);
+    if (!isMatch) {
+      return res.status(400).json({ message: "Old PIN is incorrect" });
+    }
+
+    // Hash new PIN and update
+    const hashedNewPin = await bcrypt.hash(newPin, 10);
+    await users.updateOne(
+      { phone },
+      { $set: { pin: hashedNewPin } }
+    );
+
+    res.json({ message: "PIN updated successfully" });
+  } catch (error) {
+    console.error("Reset PIN error:", error);
+    res.status(500).json({ message: error.message });
+  }
+};
+
+module.exports = { registerUser, loginUser, resetPin };
+
+
+
