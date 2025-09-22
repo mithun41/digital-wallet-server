@@ -3,10 +3,6 @@ const {
   registerUser,
   loginUser,
   getMe,
-} = require("../controllers/authControllers");
-const {
-  registerUser,
-  loginUser,
   resetPin,
 } = require("../controllers/authControllers");
 
