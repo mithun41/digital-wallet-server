@@ -1,39 +1,62 @@
+// controllers/authController.js
 const bcrypt = require("bcryptjs");
 const jwt = require("jsonwebtoken");
-const { getDB } = require("../config/db");
+const { connectDB } = require("../config/db");
 
-const usersCollection = () => getDB().collection("users");
+const usersCollection = async () => {
+  const db = await connectDB();
+  return db.collection("users");
+};
 
+// ✅ Register user
 const registerUser = async (req, res) => {
   try {
-    const { name, phone, pin } = req.body;
-    if (!name || !phone || !pin)
+    const { name, phone, photo, pin } = req.body;
+    if (!name || !phone || !pin || !photo) {
       return res.status(400).json({ message: "All fields are required" });
+    }
 
-    const existingUser = await usersCollection().findOne({ phone });
-    if (existingUser)
+    const users = await usersCollection();
+    const existingUser = await users.findOne({ phone });
+    if (existingUser) {
       return res.status(400).json({ message: "User already exists" });
+    }
 
     const hashedPin = await bcrypt.hash(pin, 10);
-    await usersCollection().insertOne({
+    const newUser = {
       name,
       phone,
       pin: hashedPin,
+      photo,
       createdAt: new Date(),
-    });
+    };
 
-    res
-      .status(201)
-      .json({ message: "User registered successfully", user: { name, phone } });
+    const result = await users.insertOne(newUser);
+
+    // JWT generate
+    const token = jwt.sign(
+      { id: result.insertedId, phone },
+      process.env.JWT_SECRET,
+      { expiresIn: "7d" }
+    );
+
+    res.status(201).json({
+      message: "User registered successfully",
+      user: { name, phone, photo },
+      token,
+    });
   } catch (error) {
+    console.error("Register error:", error);
     res.status(500).json({ message: error.message });
   }
 };
 
+// ✅ Login user
 const loginUser = async (req, res) => {
   try {
     const { phone, pin } = req.body;
-    const user = await usersCollection().findOne({ phone });
+    const users = await usersCollection();
+    const user = await users.findOne({ phone });
     if (!user) return res.status(400).json({ message: "Invalid phone or PIN" });
 
     const isMatch = await bcrypt.compare(pin, user.pin);
@@ -49,11 +72,49 @@ const loginUser = async (req, res) => {
     res.json({
       message: "Login successful",
       token,
-      user: { name: user.name, phone: user.phone },
+      user: { name: user.name, phone: user.phone, photo: user.photo },
     });
   } catch (error) {
+    console.error("Login error:", error);
     res.status(500).json({ message: error.message });
   }
 };
 
-module.exports = { registerUser, loginUser };
+// ✅ Reset PIN
+const resetPin = async (req, res) => {
+  try {
+    const { phone, oldPin, newPin } = req.body;
+    if (!phone || !oldPin || !newPin) {
+      return res.status(400).json({ message: "All fields are required" });
+    }
+
+    const users = await usersCollection();
+    const user = await users.findOne({ phone });
+    if (!user) {
+      return res.status(400).json({ message: "User not found" });
+    }
+
+    // Check old PIN
+    const isMatch = await bcrypt.compare(oldPin, user.pin);
+    if (!isMatch) {
+      return res.status(400).json({ message: "Old PIN is incorrect" });
+    }
+
+    // Hash new PIN and update
+    const hashedNewPin = await bcrypt.hash(newPin, 10);
+    await users.updateOne(
+      { phone },
+      { $set: { pin: hashedNewPin } }
+    );
+
+    res.json({ message: "PIN updated successfully" });
+  } catch (error) {
+    console.error("Reset PIN error:", error);
+    res.status(500).json({ message: error.message });
+  }
+};
+
+module.exports = { registerUser, loginUser, resetPin };
+
+
+
