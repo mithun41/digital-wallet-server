@@ -65,23 +65,41 @@ const loginUser = async (req, res) => {
   try {
     const { phone, pin } = req.body;
     const users = await usersCollection();
+
+    // phone দিয়ে user খুঁজে বের করা
     const user = await users.findOne({ phone });
     if (!user) return res.status(400).json({ message: "Invalid phone or PIN" });
 
+    // pin যাচাই করা
     const isMatch = await bcrypt.compare(pin, user.pin);
     if (!isMatch)
       return res.status(400).json({ message: "Invalid phone or PIN" });
 
+    // token তৈরি করা
     const token = jwt.sign(
       { id: user._id, phone: user.phone },
       process.env.JWT_SECRET,
       { expiresIn: "7d" }
     );
 
+    // full user data পাঠানো (pin বাদ দিয়ে)
     res.json({
       message: "Login successful",
       token,
-      user: { name: user.name, phone: user.phone, photo: user.photo },
+      user: {
+        id: user._id,
+        name: user.name,
+        phone: user.phone,
+        photo: user.photo,
+        balance: user.balance,
+        currency: user.currency,
+        transactions: user.transactions,
+        isVerified: user.isVerified,
+        role: user.role,
+        status: user.status,
+        createdAt: user.createdAt,
+        updatedAt: user.updatedAt,
+      },
     });
   } catch (error) {
     console.error("Login error:", error);
