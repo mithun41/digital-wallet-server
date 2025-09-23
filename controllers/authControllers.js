@@ -1,40 +1,40 @@
-// controllers/authController.js
 const bcrypt = require("bcryptjs");
 const jwt = require("jsonwebtoken");
 const { connectDB } = require("../config/db");
-const { ObjectId } = require("mongodb"); // ✅ এই লাইনটি যোগ করা হয়েছে
+const { ObjectId } = require("mongodb");
 
-// Lazy users collection
 const usersCollection = async () => {
   const db = await connectDB();
   return db.collection("users");
 };
 
-// ✅ Register user
 const registerUser = async (req, res) => {
   try {
     const { name, phone, photo, pin } = req.body;
-    if (!name || !phone || !pin || !photo) {
-      return res.status(400).json({ message: "All fields are required" });
-    }
 
-    const users = await usersCollection();
-    const existingUser = await users.findOne({ phone });
-    if (existingUser) {
-      return res.status(400).json({ message: "User already exists" });
-    }
-
+    // Hash the pin before storing it
     const hashedPin = await bcrypt.hash(pin, 10);
+
+    // Get the users collection from the database
+    const users = await usersCollection();
+
     const newUser = {
       name,
       phone,
-      pin: hashedPin,
+      pin: hashedPin, // Store the hashed pin
       photo,
+      balance: 0.0,
+      currency: "BDT",
+      transactions: [],
+      isVerified: true,
+      role: "user",
+      status: "active",
       createdAt: new Date(),
+      updatedAt: new Date(),
     };
+
     const result = await users.insertOne(newUser);
 
-    // JWT generate
     const token = jwt.sign(
       { id: result.insertedId, phone },
       process.env.JWT_SECRET,
@@ -43,7 +43,15 @@ const registerUser = async (req, res) => {
 
     res.status(201).json({
       message: "User registered successfully",
-      user: { name, phone, photo },
+      user: {
+        name,
+        phone,
+        photo,
+        balance: newUser.balance,
+        isVerified: newUser.isVerified,
+        role: newUser.role,
+        status: newUser.status,
+      },
       token,
     });
   } catch (error) {
@@ -57,23 +65,41 @@ const loginUser = async (req, res) => {
   try {
     const { phone, pin } = req.body;
     const users = await usersCollection();
+
+    // phone দিয়ে user খুঁজে বের করা
     const user = await users.findOne({ phone });
     if (!user) return res.status(400).json({ message: "Invalid phone or PIN" });
 
+    // pin যাচাই করা
     const isMatch = await bcrypt.compare(pin, user.pin);
     if (!isMatch)
       return res.status(400).json({ message: "Invalid phone or PIN" });
 
+    // token তৈরি করা
     const token = jwt.sign(
       { id: user._id, phone: user.phone },
       process.env.JWT_SECRET,
       { expiresIn: "7d" }
     );
 
+    // full user data পাঠানো (pin বাদ দিয়ে)
     res.json({
       message: "Login successful",
       token,
-      user: { name: user.name, phone: user.phone, photo: user.photo },
+      user: {
+        id: user._id,
+        name: user.name,
+        phone: user.phone,
+        photo: user.photo,
+        balance: user.balance,
+        currency: user.currency,
+        transactions: user.transactions,
+        isVerified: user.isVerified,
+        role: user.role,
+        status: user.status,
+        createdAt: user.createdAt,
+        updatedAt: user.updatedAt,
+      },
     });
   } catch (error) {
     console.error("Login error:", error);
@@ -132,4 +158,9 @@ const resetPin = async (req, res) => {
   }
 };
 
-module.exports = { registerUser, loginUser, getMe, resetPin };
+module.exports = {
+  registerUser,
+  loginUser,
+  getMe,
+  resetPin,
+};
