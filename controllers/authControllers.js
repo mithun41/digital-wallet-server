@@ -66,23 +66,19 @@ const loginUser = async (req, res) => {
     const { phone, pin } = req.body;
     const users = await usersCollection();
 
-    // phone দিয়ে user খুঁজে বের করা
     const user = await users.findOne({ phone });
     if (!user) return res.status(400).json({ message: "Invalid phone or PIN" });
 
-    // pin যাচাই করা
     const isMatch = await bcrypt.compare(pin, user.pin);
     if (!isMatch)
       return res.status(400).json({ message: "Invalid phone or PIN" });
 
-    // token তৈরি করা
     const token = jwt.sign(
       { id: user._id, phone: user.phone },
       process.env.JWT_SECRET,
       { expiresIn: "7d" }
     );
 
-    // full user data পাঠানো (pin বাদ দিয়ে)
     res.json({
       message: "Login successful",
       token,
@@ -107,39 +103,92 @@ const loginUser = async (req, res) => {
   }
 };
 
-// ✅ Get current user
+// Get current user
 const getMe = async (req, res) => {
   try {
-    const token = req.headers.authorization?.split(" ")[1];
-    if (!token) return res.status(401).json({ message: "Unauthorized" });
+    const user = req.user; // protect middleware থেকে আসছে
 
-    const decoded = jwt.verify(token, process.env.JWT_SECRET);
-    const users = await usersCollection();
-    const user = await users.findOne({ _id: new ObjectId(decoded.id) });
     if (!user) return res.status(404).json({ message: "User not found" });
 
+    // full user data without pin
     res.json({
-      user: { name: user.name, phone: user.phone, photo: user.photo },
+      user: {
+        id: user._id,
+        name: user.name,
+        phone: user.phone,
+        photo: user.photo,
+        balance: user.balance,
+        currency: user.currency,
+        transactions: user.transactions,
+        isVerified: user.isVerified,
+        role: user.role,
+        status: user.status,
+        createdAt: user.createdAt,
+        updatedAt: user.updatedAt,
+      },
     });
   } catch (err) {
     console.error("GetMe error:", err);
-    res.status(401).json({ message: "Invalid token" });
+    res.status(500).json({ message: "Server error" });
+  }
+};
+//  update profile
+const updateProfile = async (req, res) => {
+  try {
+    const { name, photo } = req.body;
+
+    if (!name && !photo) {
+      return res.status(400).json({ message: "Nothing to update" });
+    }
+
+    const users = await usersCollection();
+    const user = req.user; // ✅ protect middleware থেকে আসছে
+
+    const updateData = {};
+    if (name) updateData.name = name;
+    if (photo) updateData.photo = photo;
+    updateData.updatedAt = new Date();
+
+    await users.updateOne({ _id: user._id }, { $set: updateData });
+
+    // Updated user
+    const updatedUser = await users.findOne({ _id: user._id });
+
+    res.json({
+      message: "Profile updated successfully",
+      user: {
+        id: updatedUser._id,
+        name: updatedUser.name,
+        phone: updatedUser.phone,
+        photo: updatedUser.photo,
+        balance: updatedUser.balance,
+        currency: updatedUser.currency,
+        transactions: updatedUser.transactions,
+        isVerified: updatedUser.isVerified,
+        role: updatedUser.role,
+        status: updatedUser.status,
+        createdAt: updatedUser.createdAt,
+        updatedAt: updatedUser.updatedAt,
+      },
+    });
+  } catch (error) {
+    console.error("Update Profile error:", error);
+    res.status(500).json({ message: "Server error" });
   }
 };
 
 // ✅ Reset PIN
 const resetPin = async (req, res) => {
   try {
-    const { phone, oldPin, newPin } = req.body;
-    if (!phone || !oldPin || !newPin) {
-      return res.status(400).json({ message: "All fields are required" });
+    const { oldPin, newPin } = req.body;
+    if (!oldPin || !newPin) {
+      return res
+        .status(400)
+        .json({ message: "Both old and new PIN are required" });
     }
 
     const users = await usersCollection();
-    const user = await users.findOne({ phone });
-    if (!user) {
-      return res.status(400).json({ message: "User not found" });
-    }
+    const user = req.user; // protect middleware থেকে আসছে
 
     // Check old PIN
     const isMatch = await bcrypt.compare(oldPin, user.pin);
@@ -149,12 +198,15 @@ const resetPin = async (req, res) => {
 
     // Hash new PIN and update
     const hashedNewPin = await bcrypt.hash(newPin, 10);
-    await users.updateOne({ phone }, { $set: { pin: hashedNewPin } });
+    await users.updateOne(
+      { _id: user._id },
+      { $set: { pin: hashedNewPin, updatedAt: new Date() } }
+    );
 
     res.json({ message: "PIN updated successfully" });
   } catch (error) {
     console.error("Reset PIN error:", error);
-    res.status(500).json({ message: error.message });
+    res.status(500).json({ message: "Server error" });
   }
 };
 
@@ -163,4 +215,5 @@ module.exports = {
   loginUser,
   getMe,
   resetPin,
+  updateProfile,
 };

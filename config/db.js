@@ -29,5 +29,9 @@ const getDB = () => {
   if (!db) throw new Error("Database not initialized. Call connectDB first.");
   return db;
 };
+const usersCollection = async () => {
+  const database = await connectDB();
+  return database.collection("users");
+};
 
-module.exports = { connectDB, getDB };
+module.exports = { connectDB, getDB, usersCollection };
