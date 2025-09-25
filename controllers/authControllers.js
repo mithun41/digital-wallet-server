@@ -60,18 +60,51 @@ const registerUser = async (req, res) => {
   }
 };
 
-// ✅ Login user
+
+// ✅ Login user with blocking after multiple failed attempts
 const loginUser = async (req, res) => {
   try {
     const { phone, pin } = req.body;
     const users = await usersCollection();
 
     const user = await users.findOne({ phone });
-    if (!user) return res.status(400).json({ message: "Invalid phone or PIN" });
+    if (!user) {
+  return res.status(404).json({ message: "User not registered. Please sign up first." });
+}
 
+    // যদি ইউজার lock হয়ে থাকে
+    if (user.lockUntil && user.lockUntil > Date.now()) {
+  const minutesLeft = Math.ceil((user.lockUntil - Date.now()) / 60000);
+  return res
+    .status(403)
+    .json({ message: `Too many attempts. Suspended for ${minutesLeft} min.` });
+}
+
+    // পিন যাচাই
     const isMatch = await bcrypt.compare(pin, user.pin);
-    if (!isMatch)
+    if (!isMatch) {
+      let failedAttempts = (user.failedAttempts || 0) + 1;
+      let updateDoc = { $set: { failedAttempts } };
+
+      // ৩ বার ভুল হলে → ৫ মিনিট লক
+      if (failedAttempts >= 3) {
+        updateDoc = {
+          $set: {
+            failedAttempts: 0,
+            lockUntil: Date.now() + 5 * 60 * 1000, // 5 min
+          },
+        };
+      }
+
+      await users.updateOne({ _id: user._id }, updateDoc);
       return res.status(400).json({ message: "Invalid phone or PIN" });
+    }
+
+    // ✅ সঠিক হলে reset
+    await users.updateOne(
+      { _id: user._id },
+      { $set: { failedAttempts: 0, lockUntil: null } }
+    );
 
     const token = jwt.sign(
       { id: user._id, phone: user.phone },
@@ -103,6 +136,8 @@ const loginUser = async (req, res) => {
   }
 };
 
+
+// ✅ Get current user
 // Get current user
 const getMe = async (req, res) => {
   try {
