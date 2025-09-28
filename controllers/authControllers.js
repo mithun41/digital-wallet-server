@@ -87,7 +87,7 @@ const loginUser = async (req, res) => {
       let updateDoc = { $set: { failedAttempts } };
 
       // ৩ বার ভুল হলে → ৫ মিনিট লক
-      if (failedAttempts >= 3) {
+      if (failedAttempts >= 2) {
         updateDoc = {
           $set: {
             failedAttempts: 0,
