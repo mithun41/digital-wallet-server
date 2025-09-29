@@ -1,4 +1,4 @@
-// config/db.js
+// config/db.js (Updated)
 const { MongoClient } = require("mongodb");
 const dotenv = require("dotenv");
 dotenv.config();
@@ -10,11 +10,12 @@ const connectDB = async () => {
   if (db) return db; // singleton
 
   if (!client) {
-    client = new MongoClient(process.env.MONGO_URI); // direct
+    // ক্লায়েন্ট অবজেক্ট তৈরি এবং গ্লোবালি রাখা
+    client = new MongoClient(process.env.MONGO_URI);
   }
 
   try {
-    await client.connect(); // Vercel safe
+    await client.connect();
     console.log("✅ MongoDB connected");
   } catch (err) {
     console.error("❌ DB connection failed:", err);
@@ -29,9 +30,12 @@ const getDB = () => {
   if (!db) throw new Error("Database not initialized. Call connectDB first.");
   return db;
 };
-const usersCollection = async () => {
-  const database = await connectDB();
-  return database.collection("users");
+
+// ✅ নতুন ফাংশন: ট্রানজেকশনের জন্য MongoClient ক্লায়েন্ট এক্সপোর্ট করা হলো
+const getClient = () => {
+  if (!client)
+    throw new Error("MongoClient not initialized. Call connectDB first.");
+  return client;
 };
 
-module.exports = { connectDB, getDB, usersCollection };
+module.exports = { connectDB, getDB, getClient };
