@@ -7,7 +7,6 @@ const {
   updateProfile,
 } = require("../controllers/authControllers");
 const { protectByToken } = require("../middleware/authMiddleware");
-
 const router = express.Router();
 
 router.post("/register", registerUser);

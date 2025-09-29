@@ -1,4 +1,3 @@
-// api/index.js
 const express = require("express");
 const cors = require("cors");
 const dotenv = require("dotenv");
@@ -17,6 +16,7 @@ connectDB().catch((err) => {
   console.error("❌ Initial DB connection failed:", err);
 });
 
+// Existing routes
 app.use("/api", authRoutes);
 app.use("/api/transactions", transactionRoutes);
 app.get("/", (req, res) => {
