@@ -1,6 +1,6 @@
 const jwt = require("jsonwebtoken");
-const { usersCollection } = require("../config/db");
 const { ObjectId } = require("mongodb");
+const { usersCollection } = require("../config/collections");
 
 const protectByToken = async (req, res, next) => {
   try {

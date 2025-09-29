@@ -3,8 +3,7 @@ const cors = require("cors");
 const dotenv = require("dotenv");
 const { connectDB } = require("../config/db");
 const authRoutes = require("../routes/authRoutes");
-const sendManyRoutes = require("../routes/sendManyRoutes");
-const cardRoutes = require("../routes/cardRoutes"); // <-- add this
+const transactionRoutes = require("../routes/transactionRoutes");
 
 dotenv.config();
 const app = express();
@@ -19,11 +18,7 @@ connectDB().catch((err) => {
 
 // Existing routes
 app.use("/api", authRoutes);
-app.use("/api/send-many", sendManyRoutes);
-
-// 🔹 New card routes
-app.use("/api/cards", cardRoutes);
-
+app.use("/api/transactions", transactionRoutes);
 app.get("/", (req, res) => {
   res.send("🚀 Digital Wallet API is running...");
 });
