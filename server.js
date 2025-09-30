@@ -1,6 +1,6 @@
 const express = require("express");
 require("dotenv").config();
-const { addMoney } = require("./controllers/sendMoney");
+const { addMoney } = require("./controllers/addMoney");
 const app = express();
 const cors = require("cors");
 const { connectDB } = require("./config/db");
@@ -19,6 +19,8 @@ app.post('/send_money', addMoney)
 app.get("/", (req, res) => {
   res.send("🚀 Digital Wallet API is running...");
 });
+
+
 app.listen(PORT, () => {
   console.log(`🚀 Server running locally on port ${PORT}`);
 });
