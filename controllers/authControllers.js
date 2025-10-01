@@ -85,6 +85,8 @@ const loginUser = async (req, res) => {
 
     // পিন যাচাই
     const isMatch = await bcrypt.compare(pin, user.pin);
+
+    console.log(isMatch, pin, user?.pin);
     if (!isMatch) {
       let failedAttempts = (user.failedAttempts || 0) + 1;
       let updateDoc = { $set: { failedAttempts } };
@@ -209,6 +211,7 @@ const getMe = async (req, res) => {
     res.status(500).json({ message: "Server error" });
   }
 };
+
 //  update profile
 const updateProfile = async (req, res) => {
   try {

@@ -17,11 +17,12 @@ const router = express.Router();
 
 router.post("/register", registerUser);
 router.post("/login", loginUser);
-router.post('/', addMoney)
-router.post('/singleUser', singleUser)
 
-export default router;
-router.get("/me", protectByToken, getMe);
+router.post('/add_money', addMoney)
+router.put('/singleUser', singleUser)
+
+// export default router;
+router.get("/api/me", protectByToken, getMe);
 router.post("/reset-pin", protectByToken, resetPin);
 router.put("/update-profile", protectByToken, updateProfile);
 module.exports = router;
