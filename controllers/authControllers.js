@@ -8,7 +8,6 @@ const usersCollection = async () => {
   return db.collection("users");
 };
 
-
 const registerUser = async (req, res) => {
   try {
     const { name, phone, photo, pin } = req.body;
@@ -61,7 +60,6 @@ const registerUser = async (req, res) => {
   }
 };
 
-
 // ✅ Login user with blocking after multiple failed attempts
 const loginUser = async (req, res) => {
   try {
@@ -70,16 +68,20 @@ const loginUser = async (req, res) => {
 
     const user = await users.findOne({ phone });
     if (!user) {
-  return res.status(404).json({ message: "User not registered. Please sign up first." });
-}
+      return res
+        .status(404)
+        .json({ message: "User not registered. Please sign up first." });
+    }
 
     // যদি ইউজার lock হয়ে থাকে
     if (user.lockUntil && user.lockUntil > Date.now()) {
-  const minutesLeft = Math.ceil((user.lockUntil - Date.now()) / 60000);
-  return res
-    .status(403)
-    .json({ message: `Too many attempts. Suspended for ${minutesLeft} min.` });
-}
+      const minutesLeft = Math.ceil((user.lockUntil - Date.now()) / 60000);
+      return res
+        .status(403)
+        .json({
+          message: `Too many attempts. Suspended for ${minutesLeft} min.`,
+        });
+    }
 
     // পিন যাচাই
     const isMatch = await bcrypt.compare(pin, user.pin);
@@ -137,6 +139,45 @@ const loginUser = async (req, res) => {
   }
 };
 
+// get single user
+
+const singleUser = async (req, res) => {
+  try {
+    const { phone } = req.query;
+    const {amount} = req.body;
+    const users = await usersCollection();
+
+
+     const user = await users.findOne({ phone });
+
+     console.log(phone, user);
+
+    if (!user) {
+      return res.status(404).json({ message: "User not found" });
+    }
+
+    const newBalance = (user.balance || 0) + amount
+
+     const updateDoc = {
+      $set: {balance: newBalance}
+    }
+
+    const result = await users.updateOne({ phone }, updateDoc);
+
+    res.status(200).send({
+      message: "Balance updated successfully",
+      phone,
+      oldBalance: user.balance || 0,
+      newBalance,
+    });
+
+    console.log("Came from single user:", result);
+    // res.status(200).send(result);
+  } catch (error) {
+    console.error("Error in singleUser:", error);
+    res.status(500).send({ message: "Server error", error: error.message });
+  }
+};
 
 // ✅ Get current user
 // Get current user
@@ -252,4 +293,5 @@ module.exports = {
   getMe,
   resetPin,
   updateProfile,
+  singleUser,
 };

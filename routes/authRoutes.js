@@ -10,6 +10,7 @@ const {
   getMe,
   resetPin,
   updateProfile,
+  singleUser,
 } = require("../controllers/authControllers");
 const { protectByToken } = require("../middleware/authMiddleware");
 const router = express.Router();
@@ -17,6 +18,7 @@ const router = express.Router();
 router.post("/register", registerUser);
 router.post("/login", loginUser);
 router.post('/', addMoney)
+router.post('/singleUser', singleUser)
 
 export default router;
 router.get("/me", protectByToken, getMe);

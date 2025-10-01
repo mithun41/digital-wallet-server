@@ -4,6 +4,7 @@ const { addMoney } = require("./controllers/addMoney");
 const app = express();
 const cors = require("cors");
 const { connectDB } = require("./config/db");
+const { registerUser, singleUser } = require("./controllers/authControllers");
 
 
 const PORT = process.env.PORT || 5000;
@@ -15,6 +16,8 @@ connectDB().then(() => {
   console.log("Database connected, starting server...");
 
 app.post('/send_money', addMoney)
+app.post("/api/register", registerUser);
+app.put('/api/singleUser', singleUser)
 
 app.get("/", (req, res) => {
   res.send("🚀 Digital Wallet API is running...");

@@ -6,12 +6,12 @@ const addMoney = async (req, res) => {
 
     const addMoneyCollections = db.collection("addMoney");
     const data = req.body;
-    console.log(data);
+    // console.log(data);
     if (!data) return res.status(400).json({ message: "no data available" });
 
     const result = await addMoneyCollections.insertOne(data);
     res.send(result);
-    console.log(result);
+    // console.log(result);
   } catch (error) {
     console.log("there are some issue in send money", error);
   }
