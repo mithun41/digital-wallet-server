@@ -6,6 +6,7 @@ const { registerUser, loginUser } = require("../controllers/authControllers");
 const authRoutes = require("../routes/authRoutes");
 const cardRoutes = require("../routes/cardRoutes"); // <-- add this
 const transactionRoutes = require("../routes/transactionRoutes");
+const userRoute = require("../routes/userRoute");
 
 dotenv.config();
 const app = express();
@@ -23,6 +24,8 @@ app.post("/api/register", registerUser);
 app.post("/api/login", loginUser);
 // app.post('/api/send_money', SendMoney)
 // Existing routes
+
+app.use("/api/users", userRoute);
 app.use("/api", authRoutes);
 
 // 🔹 New card routes
