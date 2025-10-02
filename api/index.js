@@ -4,6 +4,7 @@ const dotenv = require("dotenv");
 const { connectDB } = require("../config/db");
 const authRoutes = require("../routes/authRoutes");
 const transactionRoutes = require("../routes/transactionRoutes");
+const userRoute = require("../routes/userRoute");
 
 dotenv.config();
 const app = express();
@@ -17,6 +18,8 @@ connectDB().catch((err) => {
 });
 
 // Existing routes
+
+app.use("/api/users", userRoute);
 app.use("/api", authRoutes);
 app.use("/api/transactions", transactionRoutes);
 app.get("/", (req, res) => {
