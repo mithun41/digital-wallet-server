@@ -10,7 +10,6 @@ const connectDB = async () => {
   if (db) return db; // singleton
 
   if (!client) {
-    // ক্লায়েন্ট অবজেক্ট তৈরি এবং গ্লোবালি রাখা
     client = new MongoClient(process.env.MONGO_URI);
   }
 
@@ -31,7 +30,6 @@ const getDB = () => {
   return db;
 };
 
-// ✅ নতুন ফাংশন: ট্রানজেকশনের জন্য MongoClient ক্লায়েন্ট এক্সপোর্ট করা হলো
 const getClient = () => {
   if (!client)
     throw new Error("MongoClient not initialized. Call connectDB first.");

@@ -22,16 +22,12 @@ connectDB().catch((err) => {
 // Routes
 app.post("/api/register", registerUser);
 app.post("/api/login", loginUser);
-// app.post('/api/send_money', SendMoney)
-// Existing routes
-
 app.use("/api/users", userRoute);
 app.use("/api", authRoutes);
-
 // 🔹 New card routes
 app.use("/api/cards", cardRoutes);
-
 app.use("/api/transactions", transactionRoutes);
+
 app.get("/", (req, res) => {
   res.send("🚀 Digital Wallet API is running...");
 });

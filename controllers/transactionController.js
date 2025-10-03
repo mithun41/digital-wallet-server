@@ -9,6 +9,78 @@ const { getClient } = require("../config/db"); // MongoDB client for session
 // Helper: round to 2 decimal places
 const roundTo2 = (num) => Math.round(num * 100) / 100;
 
+// ========================== ADD MONEY ==========================
+
+const addMoney = async (req, res) => {
+  const client = getClient();
+  const session = client.startSession();
+
+  try {
+    const { amount, method, details, password } = req.body;
+    const addAmount = parseFloat(amount);
+
+    if (isNaN(addAmount) || addAmount <= 0) {
+      return res.status(400).json({ message: "Invalid amount" });
+    }
+    if (!details) {
+      return res.status(400).json({ message: "Payment details required" });
+    }
+    if (!password) {
+      return res.status(400).json({ message: "Password required" });
+    }
+
+    await session.withTransaction(async () => {
+      const users = await usersCollection();
+
+      // Find user from token
+      const user = await users.findOne(
+        { _id: new ObjectId(req.user._id) },
+        { session }
+      );
+      if (!user) throw new Error("User not found");
+
+      // 🔑 Password check (pin/password যেটা সেভ করেছো সেটাই compare করতে হবে)
+      const isMatch = await bcrypt.compare(password, user.pin || user.password);
+      if (!isMatch) throw new Error("Invalid password");
+
+      // ✅ Update balance
+      await users.updateOne(
+        { _id: user._id },
+        { $inc: { balance: roundTo2(addAmount) } },
+        { session }
+      );
+
+      // ✅ Save transaction
+      const transactionId =
+        "TXN-" + Date.now() + "-" + Math.floor(1000 + Math.random() * 9000);
+
+      const transactions = await transactionsCollection();
+      const transactionDoc = {
+        transactionId,
+        userId: user._id,
+        type: "addMoney",
+        method,
+        details,
+        amount: roundTo2(addAmount),
+        status: "success",
+        createdAt: new Date(),
+      };
+
+      await transactions.insertOne(transactionDoc, { session });
+
+      res.status(200).json({
+        message: "Money added successfully!",
+        transaction: transactionDoc,
+      });
+    });
+  } catch (err) {
+    console.error("Add Money Error:", err);
+    res.status(400).json({ message: err.message || "Failed to add money" });
+  } finally {
+    await session.endSession();
+  }
+};
+
 // ========================== SEND MONEY ==========================
 const sendMoney = async (req, res) => {
   const client = getClient();
@@ -186,7 +258,11 @@ const getTransactions = async (req, res) => {
       await transactionsCollection()
     )
       .find({
-        $or: [{ senderPhone: userPhone }, { receiverPhone: userPhone }],
+        $or: [
+          { senderPhone: userPhone },
+          { receiverPhone: userPhone },
+          { type: "addMoney", userId: req.user._id }, // ✅ addMoney include
+        ],
       })
       .sort({ createdAt: -1 })
       .toArray();
@@ -198,4 +274,4 @@ const getTransactions = async (req, res) => {
   }
 };
 
-module.exports = { sendMoney, cashout, getTransactions };
+module.exports = { sendMoney, cashout, getTransactions, addMoney };

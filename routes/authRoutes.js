@@ -1,7 +1,4 @@
 // /routes/authRoutes.js
-import express from "express";
-import { registerUser, loginUser } from "../controllers/authController.js";
-import { addMoney } from "../controllers/addMoney.js";
 
 const express = require("express");
 const {
@@ -17,12 +14,8 @@ const router = express.Router();
 
 router.post("/register", registerUser);
 router.post("/login", loginUser);
-
-router.post('/add_money', addMoney)
-router.put('/singleUser', singleUser)
-
-// export default router;
-router.get("/api/me", protectByToken, getMe);
+router.put("/singleUser", singleUser);
+router.get("/me", protectByToken, getMe);
 router.post("/reset-pin", protectByToken, resetPin);
 router.put("/update-profile", protectByToken, updateProfile);
 module.exports = router;
