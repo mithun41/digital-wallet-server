@@ -15,7 +15,7 @@ const router = express.Router();
 router.post("/register", registerUser);
 router.post("/login", loginUser);
 router.put("/singleUser", singleUser);
-router.get("/api/me", protectByToken, getMe);
+router.get("/me", protectByToken, getMe);
 router.post("/reset-pin", protectByToken, resetPin);
 router.put("/update-profile", protectByToken, updateProfile);
 module.exports = router;
