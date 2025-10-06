@@ -1,5 +1,3 @@
-// /routes/authRoutes.js
-
 const express = require("express");
 const {
   registerUser,
@@ -7,15 +5,37 @@ const {
   getMe,
   resetPin,
   updateProfile,
-  singleUser,
+  getAllUsers,
+  updateUserStatus,
+  resetUserPin,
 } = require("../controllers/authControllers");
 const { protectByToken } = require("../middleware/authMiddleware");
+const { adminProtect } = require("../middleware/adminMiddleware");
+
 const router = express.Router();
 
+// Public
 router.post("/register", registerUser);
 router.post("/login", loginUser);
-router.put("/singleUser", singleUser);
+
+// Protected user routes
 router.get("/me", protectByToken, getMe);
-router.post("/reset-pin", protectByToken, resetPin);
 router.put("/update-profile", protectByToken, updateProfile);
+router.post("/reset-pin", protectByToken, resetPin);
+
+// Admin routes
+router.get("/admin/users", protectByToken, adminProtect, getAllUsers);
+router.patch(
+  "/admin/users/:id/status",
+  protectByToken,
+  adminProtect,
+  updateUserStatus
+);
+router.post(
+  "/admin/users/:id/reset-pin",
+  protectByToken,
+  adminProtect,
+  resetUserPin
+);
+
 module.exports = router;

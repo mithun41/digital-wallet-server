@@ -87,8 +87,9 @@ const sendMoney = async (req, res) => {
   const session = client.startSession();
 
   try {
-    const { receiverPhone, amount, note, password } = req.body;
+    const { receiverPhone, amount, fee, note, password } = req.body;
     const sendAmount = parseFloat(amount);
+    const feeAmount = parseFloat(fee) || 0;
 
     if (isNaN(sendAmount) || sendAmount <= 0) {
       return res.status(400).json({ message: "Invalid amount" });
@@ -115,19 +116,37 @@ const sendMoney = async (req, res) => {
       );
       if (!receiver) throw new Error("Receiver not found");
 
-      if (sender.balance < sendAmount) throw new Error("Insufficient balance");
+      // Admin (fee যাবে এখানে)
+      const admin = await users.findOne({ role: "admin" }, { session });
+      if (!admin) throw new Error("Admin account not found");
 
-      // Update balances
+      // Balance check (sender balance >= amount + fee)
+      if (sender.balance < sendAmount + feeAmount) {
+        throw new Error("Insufficient balance");
+      }
+
+      // Sender থেকে total deduct (amount + fee)
       await users.updateOne(
         { _id: sender._id },
-        { $inc: { balance: -roundTo2(sendAmount) } },
+        { $inc: { balance: -roundTo2(sendAmount + feeAmount) } },
         { session }
       );
+
+      // Receiver কে শুধু মূল টাকা দাও
       await users.updateOne(
         { _id: receiver._id },
         { $inc: { balance: roundTo2(sendAmount) } },
         { session }
       );
+
+      // Fee → Admin এ যোগ করো
+      if (feeAmount > 0) {
+        await users.updateOne(
+          { _id: admin._id },
+          { $inc: { balance: roundTo2(feeAmount) } },
+          { session }
+        );
+      }
 
       // Save transaction
       const transactionId =
@@ -146,6 +165,7 @@ const sendMoney = async (req, res) => {
         receiverPhone: receiver.phone,
         receiverImage: receiver.photo || null,
         amount: roundTo2(sendAmount),
+        fee: roundTo2(feeAmount),
         note: note || "",
         status: "success",
         createdAt: new Date(),
@@ -226,9 +246,9 @@ const cashout = async (req, res) => {
         senderPhone: sender.phone,
         senderImage: sender.photo || null,
         senderName: sender.name,
-        merchantName: merchant.name,
-        merchantPhone: merchant.phone,
-        merchantImage: merchant.photo || null,
+        receiverName: merchant.name,
+        receiverPhone: merchant.phone,
+        receiverImage: merchant.photo || null,
         amount: roundTo2(cashoutAmount),
         note: note || "",
         status: "success",
@@ -274,4 +294,56 @@ const getTransactions = async (req, res) => {
   }
 };
 
-module.exports = { sendMoney, cashout, getTransactions, addMoney };
+const getAllTransactions = async (req, res) => {
+  try {
+    const transactions = await (await transactionsCollection())
+      .find({})
+      .sort({ createdAt: -1 })
+      .toArray();
+
+    res.json({ transactions });
+  } catch (err) {
+    console.error("Get All Transactions Error:", err);
+    res.status(500).json({ message: "Failed to fetch all transactions" });
+  }
+};
+const refundTransaction = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const transactions = await transactionsCollection();
+    const users = await usersCollection();
+
+    const transaction = await transactions.findOne({ _id: new ObjectId(id) });
+    if (!transaction)
+      return res.status(404).json({ message: "Transaction not found" });
+    if (transaction.status !== "success")
+      return res
+        .status(400)
+        .json({ message: "Only completed transactions can be refunded" });
+
+    // Refund amount to sender
+    await users.updateOne(
+      { phone: transaction.senderPhone },
+      { $inc: { balance: transaction.amount } }
+    );
+
+    await transactions.updateOne(
+      { _id: new ObjectId(id) },
+      { $set: { status: "Refunded", updatedAt: new Date() } }
+    );
+
+    res.json({ message: "Transaction refunded successfully" });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ message: "Server error" });
+  }
+};
+
+module.exports = {
+  sendMoney,
+  cashout,
+  getTransactions,
+  addMoney,
+  getAllTransactions,
+  refundTransaction,
+};
