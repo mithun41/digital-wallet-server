@@ -8,6 +8,7 @@ const cardsCollection = async () => {
 };
 
 // Add card
+// Add card
 const addCard = async (req, res) => {
   try {
     const { number, type, holder, expiry, phone } = req.body;
@@ -26,18 +27,23 @@ const addCard = async (req, res) => {
       type,
       holder,
       expiry,
+      balance: 5000, // default balance
       createdAt: new Date(),
     };
 
     const cards = await cardsCollection();
     const result = await cards.insertOne(newCard);
 
-    res.status(201).json({ message: "Card added successfully", card: { ...newCard, _id: result.insertedId } });
+    res.status(201).json({ 
+      message: "Card added successfully", 
+      card: { ...newCard, _id: result.insertedId } 
+    });
   } catch (error) {
     console.error("Add Card Error:", error);
     res.status(500).json({ message: "Server error" });
   }
 };
+
 
 // Get cards by phone
 const getCardsByPhone = async (req, res) => {
