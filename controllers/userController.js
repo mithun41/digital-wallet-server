@@ -10,7 +10,7 @@ const checkUserByPhone = async (req, res) => {
         .json({ success: false, message: "Phone is required" });
     }
 
-    // ✅ প্রথমে function call করে collection নাও
+    // ✅ collection নাও
     const collection = await usersCollection();
     const user = await collection.findOne({ phone });
 
@@ -30,6 +30,7 @@ const checkUserByPhone = async (req, res) => {
         name: user.name,
         phone: user.phone,
         role: user.role,
+        photo: user.photo || null, // 👈 profile image পাঠানো হলো
       },
     });
   } catch (err) {
