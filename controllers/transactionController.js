@@ -9,6 +9,85 @@ const { getClient } = require("../config/db"); // MongoDB client for session
 // Helper: round to 2 decimal places
 const roundTo2 = (num) => Math.round(num * 100) / 100;
 
+// ========================== Electricity Bill ==========================
+
+const PayBill = async (req, res) => {
+  const client = getClient();
+  const session = client.startSession();
+
+  try {
+    const { amount, method, details, password } = req.body;
+    const billAmount = parseFloat(amount);
+
+    console.log(req.user);
+
+    if (isNaN(billAmount) || billAmount <= 0) {
+      return res.status(400).json({ message: "Invalid amount" });
+    }
+    if (!details) {
+      return res.status(400).json({ message: "Payment details required" });
+    }
+    if (!password) {
+      return res.status(400).json({ message: "Password required" });
+    }
+
+    await session.withTransaction(async () => {
+      const users = await usersCollection();
+
+      // Find user from token
+      
+      const user = await users.findOne(
+        { _id: new ObjectId(req.user._id) },
+        { session }
+      );
+      if (!user) throw new Error("User not found");
+
+      if (user.balance < billAmount) {
+        return res.status(400).json({ message: "Insufficient Balance" });
+      }
+
+      // 🔑 Password check
+      const isMatch = await bcrypt.compare(password, user.pin || user.password);
+      if (!isMatch) throw new Error("Invalid password");
+
+      // ✅ Deduct balance
+      await users.updateOne(
+        { _id: user._id },
+        { $inc: { balance: -roundTo2(billAmount) } },
+        { session }
+      );
+
+      // ✅ Save transaction
+      const transactionId =
+        "TXN-" + Date.now() + "-" + Math.floor(1000 + Math.random() * 9000);
+
+      const transactions = await transactionsCollection();
+      const transactionDoc = {
+        transactionId,
+        userId: user._id,
+        type: "electricity bill",
+        method,
+        details,
+        amount: roundTo2(billAmount),
+        status: "success",
+        createdAt: new Date(),
+      };
+
+      await transactions.insertOne(transactionDoc, { session });
+
+      res.status(200).json({
+        message: "Electricity bill paid successfully!",
+        transaction: transactionDoc,
+      });
+    });
+  } catch (err) {
+    console.error("Electricity Bill Error:", err);
+    res.status(400).json({ message: err.message || "Failed to pay bill" });
+  } finally {
+    await session.endSession();
+  }
+};
+
 // ========================== ADD MONEY ==========================
 
 const addMoney = async (req, res) => {
@@ -18,6 +97,8 @@ const addMoney = async (req, res) => {
   try {
     const { amount, method, details, password } = req.body;
     const addAmount = parseFloat(amount);
+
+    console.log(req.user);
 
     if (isNaN(addAmount) || addAmount <= 0) {
       return res.status(400).json({ message: "Invalid amount" });
@@ -346,4 +427,5 @@ module.exports = {
   addMoney,
   getAllTransactions,
   refundTransaction,
+  PayBill,
 };
