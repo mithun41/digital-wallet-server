@@ -1,7 +1,7 @@
 const bcrypt = require("bcryptjs");
 const {
   usersCollection,
-  transactionsCollection,
+  transactionsCollection,cardsCollection
 } = require("../config/collections");
 const { ObjectId } = require("mongodb");
 const { getClient } = require("../config/db"); // MongoDB client for session
@@ -98,8 +98,6 @@ const addMoney = async (req, res) => {
     const { amount, method, details, password } = req.body;
     const addAmount = parseFloat(amount);
 
-    console.log(req.user);
-
     if (isNaN(addAmount) || addAmount <= 0) {
       return res.status(400).json({ message: "Invalid amount" });
     }
@@ -112,30 +110,55 @@ const addMoney = async (req, res) => {
 
     await session.withTransaction(async () => {
       const users = await usersCollection();
+      const cards = await cardsCollection();
+      const transactions = await transactionsCollection();
 
-      // Find user from token
+      // 🧍 Find logged-in user
       const user = await users.findOne(
         { _id: new ObjectId(req.user._id) },
         { session }
       );
       if (!user) throw new Error("User not found");
 
-      // 🔑 Password check (pin/password যেটা সেভ করেছো সেটাই compare করতে হবে)
+      // 🔑 Password validation
       const isMatch = await bcrypt.compare(password, user.pin || user.password);
       if (!isMatch) throw new Error("Invalid password");
 
-      // ✅ Update balance
+      // 🏦 If payment via Card, verify and deduct
+      if (method === "card") {
+        // Find user’s card by masked number (last 4 digits)
+        const userCard = await cards.findOne(
+          {
+            userId: new ObjectId(user._id),
+            number: { $regex: `${details.slice(-4)}$` },
+          },
+          { session }
+        );
+
+        if (!userCard) throw new Error("Card not found or does not belong to you");
+
+        if (userCard.balance < addAmount)
+          throw new Error("Insufficient card balance");
+
+        // Deduct from card balance
+        await cards.updateOne(
+          { _id: userCard._id },
+          { $inc: { balance: -roundTo2(addAmount) } },
+          { session }
+        );
+      }
+
+      // 💰 Add money to user wallet
       await users.updateOne(
         { _id: user._id },
         { $inc: { balance: roundTo2(addAmount) } },
         { session }
       );
 
-      // ✅ Save transaction
+      // 📜 Save transaction
       const transactionId =
         "TXN-" + Date.now() + "-" + Math.floor(1000 + Math.random() * 9000);
 
-      const transactions = await transactionsCollection();
       const transactionDoc = {
         transactionId,
         userId: user._id,
