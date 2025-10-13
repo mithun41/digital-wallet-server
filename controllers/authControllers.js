@@ -1,27 +1,21 @@
 const bcrypt = require("bcryptjs");
 const jwt = require("jsonwebtoken");
-const { connectDB } = require("../config/db");
 const { ObjectId } = require("mongodb");
+const { usersCollection } = require("../config/collections");
 
-const usersCollection = async () => {
-  const db = await connectDB();
-  return db.collection("users");
-};
+// ------------------- User Controllers -------------------
 
+// Register new user
 const registerUser = async (req, res) => {
   try {
     const { name, phone, photo, pin } = req.body;
-
-    // Hash the pin before storing it
     const hashedPin = await bcrypt.hash(pin, 10);
-
-    // Get the users collection from the database
     const users = await usersCollection();
 
     const newUser = {
       name,
       phone,
-      pin: hashedPin, // Store the hashed pin
+      pin: hashedPin,
       photo,
       balance: 0.0,
       currency: "BDT",
@@ -60,47 +54,38 @@ const registerUser = async (req, res) => {
   }
 };
 
-
-// ✅ Login user with blocking after multiple failed attempts
+// Login user
 const loginUser = async (req, res) => {
   try {
     const { phone, pin } = req.body;
     const users = await usersCollection();
-
     const user = await users.findOne({ phone });
-    if (!user) {
-  return res.status(404).json({ message: "User not registered. Please sign up first." });
-}
 
-    // যদি ইউজার lock হয়ে থাকে
+    if (!user)
+      return res
+        .status(404)
+        .json({ message: "User not registered. Please sign up first." });
+
     if (user.lockUntil && user.lockUntil > Date.now()) {
-  const minutesLeft = Math.ceil((user.lockUntil - Date.now()) / 60000);
-  return res
-    .status(403)
-    .json({ message: `Too many attempts. Suspended for ${minutesLeft} min.` });
-}
+      const minutesLeft = Math.ceil((user.lockUntil - Date.now()) / 60000);
+      return res.status(403).json({
+        message: `Too many attempts. Suspended for ${minutesLeft} min.`,
+      });
+    }
 
-    // পিন যাচাই
     const isMatch = await bcrypt.compare(pin, user.pin);
     if (!isMatch) {
       let failedAttempts = (user.failedAttempts || 0) + 1;
       let updateDoc = { $set: { failedAttempts } };
-
-      // ৩ বার ভুল হলে → ৫ মিনিট লক
-      if (failedAttempts >= 2) {
+      if (failedAttempts >= 3) {
         updateDoc = {
-          $set: {
-            failedAttempts: 0,
-            lockUntil: Date.now() + 5 * 60 * 1000, // 5 min
-          },
+          $set: { failedAttempts: 0, lockUntil: Date.now() + 5 * 60 * 1000 },
         };
       }
-
       await users.updateOne({ _id: user._id }, updateDoc);
       return res.status(400).json({ message: "Invalid phone or PIN" });
     }
 
-    // ✅ সঠিক হলে reset
     await users.updateOne(
       { _id: user._id },
       { $set: { failedAttempts: 0, lockUntil: null } }
@@ -136,48 +121,28 @@ const loginUser = async (req, res) => {
   }
 };
 
-
-// ✅ Get current user
 // Get current user
 const getMe = async (req, res) => {
   try {
-    const user = req.user; // protect middleware থেকে আসছে
-
+    const user = req.user;
     if (!user) return res.status(404).json({ message: "User not found" });
 
-    // full user data without pin
-    res.json({
-      user: {
-        id: user._id,
-        name: user.name,
-        phone: user.phone,
-        photo: user.photo,
-        balance: user.balance,
-        currency: user.currency,
-        transactions: user.transactions,
-        isVerified: user.isVerified,
-        role: user.role,
-        status: user.status,
-        createdAt: user.createdAt,
-        updatedAt: user.updatedAt,
-      },
-    });
+    res.json({ user: { ...user, pin: undefined } });
   } catch (err) {
     console.error("GetMe error:", err);
     res.status(500).json({ message: "Server error" });
   }
 };
-//  update profile
+
+// Update profile
 const updateProfile = async (req, res) => {
   try {
     const { name, photo } = req.body;
-
-    if (!name && !photo) {
+    if (!name && !photo)
       return res.status(400).json({ message: "Nothing to update" });
-    }
 
     const users = await usersCollection();
-    const user = req.user; // ✅ protect middleware থেকে আসছে
+    const user = req.user;
 
     const updateData = {};
     if (name) updateData.name = name;
@@ -185,53 +150,28 @@ const updateProfile = async (req, res) => {
     updateData.updatedAt = new Date();
 
     await users.updateOne({ _id: user._id }, { $set: updateData });
-
-    // Updated user
     const updatedUser = await users.findOne({ _id: user._id });
 
-    res.json({
-      message: "Profile updated successfully",
-      user: {
-        id: updatedUser._id,
-        name: updatedUser.name,
-        phone: updatedUser.phone,
-        photo: updatedUser.photo,
-        balance: updatedUser.balance,
-        currency: updatedUser.currency,
-        transactions: updatedUser.transactions,
-        isVerified: updatedUser.isVerified,
-        role: updatedUser.role,
-        status: updatedUser.status,
-        createdAt: updatedUser.createdAt,
-        updatedAt: updatedUser.updatedAt,
-      },
-    });
+    res.json({ message: "Profile updated successfully", user: updatedUser });
   } catch (error) {
     console.error("Update Profile error:", error);
     res.status(500).json({ message: "Server error" });
   }
 };
 
-// ✅ Reset PIN
+// Reset PIN
 const resetPin = async (req, res) => {
   try {
     const { oldPin, newPin } = req.body;
-    if (!oldPin || !newPin) {
-      return res
-        .status(400)
-        .json({ message: "Both old and new PIN are required" });
-    }
+    if (!oldPin || !newPin)
+      return res.status(400).json({ message: "Both old and new PIN required" });
 
     const users = await usersCollection();
-    const user = req.user; // protect middleware থেকে আসছে
-
-    // Check old PIN
+    const user = req.user;
     const isMatch = await bcrypt.compare(oldPin, user.pin);
-    if (!isMatch) {
+    if (!isMatch)
       return res.status(400).json({ message: "Old PIN is incorrect" });
-    }
 
-    // Hash new PIN and update
     const hashedNewPin = await bcrypt.hash(newPin, 10);
     await users.updateOne(
       { _id: user._id },
@@ -245,10 +185,71 @@ const resetPin = async (req, res) => {
   }
 };
 
+// ------------------- Admin Controllers -------------------
+
+// Get all users
+const getAllUsers = async (req, res) => {
+  try {
+    const users = await usersCollection();
+    const allUsers = await users.find({}).project({ pin: 0 }).toArray();
+    res.json(allUsers);
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ message: "Server error" });
+  }
+};
+
+// Update user status (block/unblock)
+const updateUserStatus = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { status } = req.body; // "active" or "blocked"
+    const users = await usersCollection();
+    const user = await users.findOne({ _id: new ObjectId(id) });
+    if (!user) return res.status(404).json({ message: "User not found" });
+
+    await users.updateOne(
+      { _id: new ObjectId(id) },
+      { $set: { status, updatedAt: new Date() } }
+    );
+    res.json({ message: `User status updated to ${status}` });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ message: "Server error" });
+  }
+};
+
+// Admin reset user PIN
+const resetUserPin = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { newPin } = req.body;
+    if (!newPin)
+      return res.status(400).json({ message: "New PIN is required" });
+
+    const users = await usersCollection();
+    const user = await users.findOne({ _id: new ObjectId(id) });
+    if (!user) return res.status(404).json({ message: "User not found" });
+
+    const hashedPin = await bcrypt.hash(newPin, 10);
+    await users.updateOne(
+      { _id: new ObjectId(id) },
+      { $set: { pin: hashedPin, updatedAt: new Date() } }
+    );
+    res.json({ message: "User PIN reset successfully" });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ message: "Server error" });
+  }
+};
+
 module.exports = {
   registerUser,
   loginUser,
   getMe,
   resetPin,
   updateProfile,
+  getAllUsers,
+  updateUserStatus,
+  resetUserPin,
 };
