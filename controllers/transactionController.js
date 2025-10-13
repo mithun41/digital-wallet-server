@@ -32,32 +32,37 @@ const addMoney = async (req, res) => {
     await session.withTransaction(async () => {
       const users = await usersCollection();
 
-      // Find user from token
+      // 🔍 Find user from token
       const user = await users.findOne(
         { _id: new ObjectId(req.user._id) },
         { session }
       );
       if (!user) throw new Error("User not found");
 
-      // 🔑 Password check (pin/password যেটা সেভ করেছো সেটাই compare করতে হবে)
+      // 🔐 Password / PIN check
       const isMatch = await bcrypt.compare(password, user.pin || user.password);
       if (!isMatch) throw new Error("Invalid password");
 
-      // ✅ Update balance
+      // 💰 Update wallet balance
       await users.updateOne(
         { _id: user._id },
         { $inc: { balance: roundTo2(addAmount) } },
         { session }
       );
 
-      // ✅ Save transaction
+      // 🧾 Generate transaction ID
       const transactionId =
         "TXN-" + Date.now() + "-" + Math.floor(1000 + Math.random() * 9000);
 
       const transactions = await transactionsCollection();
+
+      // ✅ Transaction document (now includes user details)
       const transactionDoc = {
         transactionId,
         userId: user._id,
+        userName: user.name || "Unknown User",
+        userPhone: user.phone || "N/A",
+        userImage: user.photo || null,
         type: "addMoney",
         method,
         details,
@@ -66,6 +71,7 @@ const addMoney = async (req, res) => {
         createdAt: new Date(),
       };
 
+      // 💾 Save to DB
       await transactions.insertOne(transactionDoc, { session });
 
       res.status(200).json({

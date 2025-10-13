@@ -7,6 +7,7 @@ const authRoutes = require("../routes/authRoutes");
 const cardRoutes = require("../routes/cardRoutes"); // <-- add this
 const transactionRoutes = require("../routes/transactionRoutes");
 const userRoute = require("../routes/userRoute");
+const fingerprintRoutes = require("../routes/fingerprintRoutes");
 
 dotenv.config();
 const app = express();
@@ -20,13 +21,16 @@ connectDB().catch((err) => {
 });
 
 // Routes
-app.post("/api/register", registerUser);
-app.post("/api/login", loginUser);
+// app.post("/api/register", registerUser);
+// app.post("/api/login", loginUser);
 app.use("/api/users", userRoute);
 app.use("/api", authRoutes);
 // 🔹 New card routes
 app.use("/api/cards", cardRoutes);
 app.use("/api/transactions", transactionRoutes);
+
+//fingerprint
+app.use("/api/fingerprint", fingerprintRoutes);
 
 app.get("/", (req, res) => {
   res.send("🚀 Digital Wallet API is running...");
