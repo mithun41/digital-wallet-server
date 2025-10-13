@@ -68,11 +68,9 @@ const loginUser = async (req, res) => {
 
     if (user.lockUntil && user.lockUntil > Date.now()) {
       const minutesLeft = Math.ceil((user.lockUntil - Date.now()) / 60000);
-      return res
-        .status(403)
-        .json({
-          message: `Too many attempts. Suspended for ${minutesLeft} min.`,
-        });
+      return res.status(403).json({
+        message: `Too many attempts. Suspended for ${minutesLeft} min.`,
+      });
     }
 
     const isMatch = await bcrypt.compare(pin, user.pin);

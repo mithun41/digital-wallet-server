@@ -1,7 +1,8 @@
 const bcrypt = require("bcryptjs");
 const {
   usersCollection,
-  transactionsCollection,cardsCollection
+  transactionsCollection,
+  cardsCollection,
 } = require("../config/collections");
 const { ObjectId } = require("mongodb");
 const { getClient } = require("../config/db"); // MongoDB client for session
@@ -35,7 +36,7 @@ const PayBill = async (req, res) => {
       const users = await usersCollection();
 
       // Find user from token
-      
+
       const user = await users.findOne(
         { _id: new ObjectId(req.user._id) },
         { session }
@@ -135,7 +136,8 @@ const addMoney = async (req, res) => {
           { session }
         );
 
-        if (!userCard) throw new Error("Card not found or does not belong to you");
+        if (!userCard)
+          throw new Error("Card not found or does not belong to you");
 
         if (userCard.balance < addAmount)
           throw new Error("Insufficient card balance");
@@ -162,6 +164,9 @@ const addMoney = async (req, res) => {
       const transactionDoc = {
         transactionId,
         userId: user._id,
+        userName: user.name || "Unknown User",
+        userPhone: user.phone || "N/A",
+        userImage: user.photo || null,
         type: "addMoney",
         method,
         details,
@@ -170,6 +175,7 @@ const addMoney = async (req, res) => {
         createdAt: new Date(),
       };
 
+      // 💾 Save to DB
       await transactions.insertOne(transactionDoc, { session });
 
       res.status(200).json({

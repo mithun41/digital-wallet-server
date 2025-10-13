@@ -8,6 +8,10 @@ const {
   getAllUsers,
   updateUserStatus,
   resetUserPin,
+  startFingerprintRegistration,
+  verifyFingerprintRegistration,
+  startFingerprintLogin,
+  verifyFingerprintLogin,
 } = require("../controllers/authControllers");
 const { protectByToken } = require("../middleware/authMiddleware");
 const { adminProtect } = require("../middleware/adminMiddleware");
@@ -37,5 +41,4 @@ router.post(
   adminProtect,
   resetUserPin
 );
-
 module.exports = router;
