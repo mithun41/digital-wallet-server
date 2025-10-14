@@ -4,11 +4,11 @@ const dotenv = require("dotenv");
 const { connectDB } = require("../config/db");
 const { registerUser, loginUser } = require("../controllers/authControllers");
 const authRoutes = require("../routes/authRoutes");
-const cardRoutes = require("../routes/cardRoutes"); // <-- add this
+const cardRoutes = require("../routes/cardRoutes");
 const transactionRoutes = require("../routes/transactionRoutes");
 const userRoute = require("../routes/userRoute");
 const fingerprintRoutes = require("../routes/fingerprintRoutes");
-const eduRoutes = require("../routes/eduRoutes")
+const loanRoutes = require("../routes/loanRoutes");
 
 dotenv.config();
 const app = express();
@@ -29,12 +29,11 @@ app.use("/api", authRoutes);
 // 🔹 New card routes
 app.use("/api/cards", cardRoutes);
 app.use("/api/transactions", transactionRoutes);
+// 🔹 Loan routes
+app.use("/api/loans", loanRoutes);
 
 //fingerprint
 app.use("/api/fingerprint", fingerprintRoutes);
-
-// education
-app.use("/api/educationFee", eduRoutes);
 
 app.get("/", (req, res) => {
   res.send("🚀 Digital Wallet API is running...");
