@@ -21,7 +21,7 @@ const PayBill = async (req, res) => {
     const { amount, method, details, password } = req.body;
     const billAmount = parseFloat(amount);
 
-    console.log(req.user);
+    // console.log(req.user);
 
     if (isNaN(billAmount) || billAmount <= 0) {
       return res.status(400).json({ message: "Invalid amount" });
@@ -166,7 +166,10 @@ const addMoney = async (req, res) => {
         transactionId,
         userId: user._id,
         userName: user.name || "Unknown User",
+        senderName: user.name || "Unknown User",
         userPhone: user.phone || "N/A",
+        senderPhone: method || "N/A",
+        receiverPhone: user.phone || "N/A",
         userImage: user.photo || null,
         type: "addMoney",
         method,
