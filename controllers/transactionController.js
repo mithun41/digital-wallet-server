@@ -20,7 +20,7 @@ const PayBill = async (req, res) => {
     const { amount, method, details, password } = req.body;
     const billAmount = parseFloat(amount);
 
-    console.log(req.user);
+    // console.log(req.user);
 
     if (isNaN(billAmount) || billAmount <= 0) {
       return res.status(400).json({ message: "Invalid amount" });
@@ -165,7 +165,10 @@ const addMoney = async (req, res) => {
         transactionId,
         userId: user._id,
         userName: user.name || "Unknown User",
+        senderName: user.name || "Unknown User",
         userPhone: user.phone || "N/A",
+        senderPhone: method || "N/A",
+        receiverPhone: user.phone || "N/A",
         userImage: user.photo || null,
         type: "addMoney",
         method,
@@ -294,6 +297,141 @@ const sendMoney = async (req, res) => {
     await session.endSession();
   }
 };
+
+
+
+// ========================== SEND TO CARD ==========================
+const sendToCard = async (req, res) => {
+  const client = getClient();
+  const session = client.startSession();
+
+  try {
+    // ✅ Detect transfer type automatically from endpoint
+    const transferType = req.originalUrl.includes("bank") ? "bank" : "card";
+
+    const { cardNumber, bankAccount, amount, fee, password, note } = req.body;
+    const sendAmount = parseFloat(amount);
+    const feeAmount = parseFloat(fee) || 0;
+
+    if (isNaN(sendAmount) || sendAmount <= 0) {
+      return res.status(400).json({ message: "Invalid amount" });
+    }
+
+    await session.withTransaction(async () => {
+      const users = await usersCollection();
+      const cards = await cardsCollection();
+      const transactions = await transactionsCollection();
+
+      // ================== Find sender ==================
+      const sender = await users.findOne({ _id: new ObjectId(req.user._id) }, { session });
+      if (!sender) throw new Error("Sender not found");
+
+      // Password check
+      const isMatch = await bcrypt.compare(password, sender.pin || sender.password);
+      if (!isMatch) throw new Error("Invalid password");
+
+      // Check balance
+      if (sender.balance < sendAmount + feeAmount) throw new Error("Insufficient balance");
+
+      // Deduct from sender
+      await users.updateOne(
+        { _id: sender._id },
+        { $inc: { balance: -roundTo2(sendAmount + feeAmount) } },
+        { session }
+      );
+
+      let receiverInfo = {};
+
+      // ================== CARD TRANSFER ==================
+      if (transferType === "card") {
+        const last4 = cardNumber.slice(-4);
+        const card = await cards.findOne({ number: { $regex: `\\*?\\s*${last4}$` } }, { session });
+        if (!card) throw new Error("Card not found");
+
+        const receiver = await users.findOne({ _id: new ObjectId(card.userId) }, { session });
+        if (!receiver) throw new Error("Receiver not found");
+
+        // Add to receiver’s card balance
+        await cards.updateOne(
+          { _id: card._id },
+          { $inc: { balance: roundTo2(sendAmount) } },
+          { session }
+        );
+
+        receiverInfo = {
+          receiverId: receiver._id,
+          receiverName: receiver.name,
+          receiverPhone: receiver.phone,
+          receiverImage: receiver.photo || null,
+        };
+      }
+
+      // ================== BANK TRANSFER ==================
+      else if (transferType === "bank") {
+        // ✅ Skip any validation or credit update — just record transaction
+        receiverInfo = {
+          receiverName: "Bank Account",
+          receiverPhone: bankAccount || "N/A",
+          receiverImage: null,
+        };
+      }
+
+      else {
+        throw new Error("Invalid transfer type");
+      }
+
+      // ================== Fee to Admin ==================
+      if (feeAmount > 0) {
+        const admin = await users.findOne({ role: "admin" }, { session });
+        if (admin) {
+          await users.updateOne(
+            { _id: admin._id },
+            { $inc: { balance: roundTo2(feeAmount) } },
+            { session }
+          );
+        }
+      }
+
+      // ================== Save transaction ==================
+      const transactionId = "TXN-" + Date.now() + "-" + Math.floor(1000 + Math.random() * 9000);
+
+      const transactionDoc = {
+        transactionId,
+        type: transferType === "bank" ? "sendToBank" : "sendToCard",
+        senderId: sender._id,
+        senderName: sender.name,
+        senderPhone: sender.phone,
+        senderImage: sender.photo || null,
+        amount: roundTo2(sendAmount),
+        fee: roundTo2(feeAmount),
+        note: note || "",
+        status: "success",
+        createdAt: new Date(),
+        ...receiverInfo,
+      };
+
+      await transactions.insertOne(transactionDoc, { session });
+
+      res.status(200).json({
+        message:
+          transferType === "bank"
+            ? "Money sent successfully to bank account"
+            : "Money sent successfully to card",
+        transaction: transactionDoc,
+      });
+    });
+  } catch (error) {
+    console.error("Send Money Error:", error);
+    res.status(500).json({ message: error.message || "Internal server error" });
+  } finally {
+    await session.endSession();
+  }
+};
+
+
+
+
+
 
 // ========================== CASHOUT ==========================
 const cashout = async (req, res) => {
@@ -457,4 +595,5 @@ module.exports = {
   getAllTransactions,
   refundTransaction,
   PayBill,
+  sendToCard
 };

@@ -17,9 +17,15 @@ const protectByToken = async (req, res, next) => {
     }
 
     const users = await usersCollection();
+<<<<<<< HEAD
     console.log(decoded.id);
     const user = await users.findOne({ _id: new ObjectId(decoded.id) });
     console.log(user);
+=======
+    // console.log(decoded.id);
+    const user = await users.findOne({ _id: new ObjectId(decoded.id) });
+    // console.log(user);
+>>>>>>> 7e8f459a68ea2ef829b38e0402a26f15c03c0b7a
     if (!user)
       return res.status(401).json({ message: "Unauthorized: User not found" });
 
