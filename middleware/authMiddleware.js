@@ -1,6 +1,6 @@
 const jwt = require("jsonwebtoken");
-const { usersCollection } = require("../config/db");
 const { ObjectId } = require("mongodb");
+const { usersCollection } = require("../config/collections");
 
 const protectByToken = async (req, res, next) => {
   try {
@@ -17,7 +17,9 @@ const protectByToken = async (req, res, next) => {
     }
 
     const users = await usersCollection();
+    console.log(decoded.id);
     const user = await users.findOne({ _id: new ObjectId(decoded.id) });
+    console.log(user);
     if (!user)
       return res.status(401).json({ message: "Unauthorized: User not found" });
 
