@@ -3,25 +3,41 @@ const cors = require("cors");
 const dotenv = require("dotenv");
 const { connectDB } = require("../config/db");
 const { registerUser, loginUser } = require("../controllers/authControllers");
+const authRoutes = require("../routes/authRoutes");
+const cardRoutes = require("../routes/cardRoutes"); // <-- add this
+const transactionRoutes = require("../routes/transactionRoutes");
+const userRoute = require("../routes/userRoute");
+const fingerprintRoutes = require("../routes/fingerprintRoutes");
+const eduRoutes = require("../routes/eduRoutes")
 
 dotenv.config();
 const app = express();
+
 app.use(cors());
 app.use(express.json());
 
-const startServer = async () => {
-  try {
-    await connectDB();
+// 🔹 Connect DB immediately (before handling requests)
+connectDB().catch((err) => {
+  console.error("❌ Initial DB connection failed:", err);
+});
 
-    // Routes
-    app.post("/api/register", registerUser);
-    app.post("/api/login", loginUser);
+// Routes
+// app.post("/api/register", registerUser);
+// app.post("/api/login", loginUser);
+app.use("/api/users", userRoute);
+app.use("/api", authRoutes);
+// 🔹 New card routes
+app.use("/api/cards", cardRoutes);
+app.use("/api/transactions", transactionRoutes);
 
-    const PORT = process.env.PORT || 5000;
-    app.listen(PORT, () => console.log(`🚀 Server running on port ${PORT}`));
-  } catch (err) {
-    console.error("❌ DB connection failed:", err);
-  }
-};
+//fingerprint
+app.use("/api/fingerprint", fingerprintRoutes);
 
-startServer();
+// education
+app.use("/api/educationFee", eduRoutes);
+
+app.get("/", (req, res) => {
+  res.send("🚀 Digital Wallet API is running...");
+});
+
+module.exports = app;
