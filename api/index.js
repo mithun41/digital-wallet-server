@@ -8,6 +8,7 @@ const cardRoutes = require("../routes/cardRoutes"); // <-- add this
 const transactionRoutes = require("../routes/transactionRoutes");
 const userRoute = require("../routes/userRoute");
 const fingerprintRoutes = require("../routes/fingerprintRoutes");
+// const liveChat = require("../controllers/socketio");
 
 dotenv.config();
 const app = express();
@@ -31,6 +32,9 @@ app.use("/api/transactions", transactionRoutes);
 
 //fingerprint
 app.use("/api/fingerprint", fingerprintRoutes);
+
+// live chat
+// liveChat
 
 app.get("/", (req, res) => {
   res.send("🚀 Digital Wallet API is running...");
