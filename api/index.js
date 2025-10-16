@@ -9,7 +9,6 @@ const transactionRoutes = require("../routes/transactionRoutes");
 const userRoute = require("../routes/userRoute");
 const fingerprintRoutes = require("../routes/fingerprintRoutes");
 const loanRoutes = require("../routes/loanRoutes");
-const educationRoutes = require("../routes/eduRoutes");
 
 dotenv.config();
 const app = express();

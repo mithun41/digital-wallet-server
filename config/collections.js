@@ -30,5 +30,4 @@ module.exports = {
   transactionsCollection,
   cardsCollection,
   loansCollection,
-  educationCollection
 };
