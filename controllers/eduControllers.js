@@ -2,9 +2,9 @@ const { educationCollection } = require("../config/collections");
 
 const education = async (req, res) => {
   try {
-    console.log("✅ Received Education Request:", req.body); // debug
+    console.log("✅ Received Education Request:", req.body);
 
-    const collection = await educationCollection(); // await অবশ্যই দরকার
+    const collection = await educationCollection();
     console.log("✅ Connected to Education Collection");
 
     const {
@@ -12,7 +12,8 @@ const education = async (req, res) => {
       studentId,
       institution,
       feeAmount,
-      serviceFee,
+      discountPercent,
+      discountAmount,
       totalAmount,
       paymentMethod,
     } = req.body;
@@ -22,7 +23,8 @@ const education = async (req, res) => {
       studentId,
       institution,
       feeAmount: parseFloat(feeAmount),
-      serviceFee: parseFloat(serviceFee),
+      discountPercent: parseFloat(discountPercent), 
+      discountAmount: parseFloat(discountAmount),
       totalAmount: parseFloat(totalAmount),
       paymentMethod,
       transactionId: `EDU${Date.now()}`,
@@ -35,7 +37,7 @@ const education = async (req, res) => {
 
     res.status(201).json({ success: true, data: result });
   } catch (error) {
-    console.error("❌ Error:", error.message); // show actual error
+    console.error("❌ Error:", error.message);
     res.status(500).json({ success: false, message: error.message });
   }
 };
