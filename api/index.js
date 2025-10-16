@@ -9,6 +9,7 @@ const transactionRoutes = require("../routes/transactionRoutes");
 const userRoute = require("../routes/userRoute");
 const fingerprintRoutes = require("../routes/fingerprintRoutes");
 const loanRoutes = require("../routes/loanRoutes");
+const { education } = require("../controllers/eduControllers");
 
 dotenv.config();
 const app = express();
@@ -36,7 +37,7 @@ app.use("/api/loans", loanRoutes);
 app.use("/api/fingerprint", fingerprintRoutes);
  
 //education
-app.use("/api/education", educationRoutes);
+app.use("/api/education", education);
 
 app.get("/", (req, res) => {
   res.send("🚀 Digital Wallet API is running...");
