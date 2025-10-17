@@ -9,7 +9,7 @@ function liveChat(app) {
 
   io = new Server(server, {
     cors: {
-      origin: "http://localhost:5173",
+      origin: "*",
       methods: ["GET", "POST"],
     },
   });
@@ -22,8 +22,9 @@ function liveChat(app) {
     // 🔹 যখন কেউ রুমে যোগ দেবে
     socket.on("join_room", ({ name, role, room }) => {
       users[socket.id] = { name, role, room };
+
       socket.join(room);
-      console.log(`${name} (${role}) joined room ${room}`);
+    //   console.log(`${name} (${role}) joined room ${room}`);
 
       // যদি user হয়, তাহলে admin-দের জানাও নতুন user এসেছে
       if (role === "user") {
@@ -32,6 +33,10 @@ function liveChat(app) {
             io.to(id).emit("user_list", getUserList(users));
           }
         }
+      }
+
+      if (role === "admin") {
+        socket.emit("user_list", getUserList(users)); // এইখানেই check করবে
       }
     });
 
@@ -43,6 +48,7 @@ function liveChat(app) {
 
       // 🧑‍💻 যদি ইউজার হয় → মেসেজ যাবে শুধু অ্যাডমিনদের কাছে
       if (sender.role === "user") {
+        // console.log("ok");
         for (let [id, u] of Object.entries(users)) {
           if (u.role === "admin") {
             io.to(id).emit("receive_message", {
@@ -53,6 +59,8 @@ function liveChat(app) {
           }
         }
       }
+
+    //   console.log(data);
 
       // 👨‍💼 যদি অ্যাডমিন হয় → নির্দিষ্ট ইউজারের কাছে পাঠাবে
       if (sender.role === "admin" && data.toSocket) {

@@ -81,7 +81,10 @@ const PayBill = async (req, res) => {
         transaction: transactionDoc,
       });
     });
-  } catch (err) {
+  } 
+  
+  
+  catch (err) {
     console.error("Electricity Bill Error:", err);
     res.status(400).json({ message: err.message || "Failed to pay bill" });
   } finally {
