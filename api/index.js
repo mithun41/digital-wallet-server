@@ -8,6 +8,7 @@ const cardRoutes = require("../routes/cardRoutes");
 const transactionRoutes = require("../routes/transactionRoutes");
 const userRoute = require("../routes/userRoute");
 const fingerprintRoutes = require("../routes/fingerprintRoutes");
+const reportRoutes = require('../routes/reportRoutes');
 const liveChat = require("../controllers/socketio");
 const PORT = process.env.PORT || 5000;;
 const loanRoutes = require("../routes/loanRoutes");
@@ -31,9 +32,13 @@ app.use("/api/users", userRoute);
 app.use("/api", authRoutes);
 // 🔹 New card routes
 app.use("/api/cards", cardRoutes);
+
 app.use("/api/transactions", transactionRoutes);
 // 🔹 Loan routes
 app.use("/api/loans", loanRoutes);
+
+// report                   
+app.use("/api/report", reportRoutes);
 
 //fingerprint
 app.use("/api/fingerprint", fingerprintRoutes);
