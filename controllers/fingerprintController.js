@@ -43,10 +43,6 @@ const startFingerprintRegistration = async (req, res) => {
     phone: user.phone,
   });
 
-  // লগ এখন ঠিকভাবে আসবে:
-  console.log("Options:", options);
-  console.log("Challenge:", options.challenge);
-
   return res.json(options);
 };
 

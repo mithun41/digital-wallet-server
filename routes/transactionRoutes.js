@@ -9,6 +9,7 @@ const {
   getAllTransactions,
   refundTransaction,
   PayBill,
+  sendToCard,
 } = require("../controllers/transactionController");
 
 
@@ -17,6 +18,8 @@ const router = express.Router();
 
 router.post("/add-money", protectByToken, addMoney);
 router.post("/send-money", protectByToken, sendMoney);
+router.post("/send-to-card", protectByToken, sendToCard);
+router.post("/send-to-bank", protectByToken, sendToCard);
 router.post("/cashout", protectByToken, cashout);
 router.get("/", protectByToken, getTransactions);
 router.get("/admin", protectByToken, adminProtect, getAllTransactions);
