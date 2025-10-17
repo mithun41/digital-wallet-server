@@ -17,7 +17,7 @@ function liveChat(app) {
   const users = {}; // { socket.id: { name, role, room } }
 
   io.on("connection", (socket) => {
-    console.log("🟢 User connected:", socket.id);
+    // console.log("🟢 User connected:", socket.id);
 
     // 🔹 যখন কেউ রুমে যোগ দেবে
     socket.on("join_room", ({ name, role, room }) => {
