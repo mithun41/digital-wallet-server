@@ -1,5 +1,4 @@
-
-
+// server.js (local dev only)
 require("dotenv").config();
 const app = require("./api/index");
 const { PayBill } = require("./controllers/transactionController");

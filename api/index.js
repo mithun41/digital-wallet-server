@@ -7,10 +7,9 @@ const authRoutes = require("../routes/authRoutes");
 const cardRoutes = require("../routes/cardRoutes");
 const transactionRoutes = require("../routes/transactionRoutes");
 const userRoute = require("../routes/userRoute");
-const fingerprintRoutes = require("../routes/fingerprintRoutes");
-const reportRoutes = require('../routes/reportRoutes');
+const reportRoutes = require("../routes/reportRoutes");
 const liveChat = require("../controllers/socketio");
-const PORT = process.env.PORT || 5000;;
+const PORT = process.env.PORT || 5000;
 const loanRoutes = require("../routes/loanRoutes");
 const { education } = require("../controllers/eduControllers");
 
@@ -37,17 +36,14 @@ app.use("/api/transactions", transactionRoutes);
 // 🔹 Loan routes
 app.use("/api/loans", loanRoutes);
 
-// report                   
+// report
 app.use("/api/report", reportRoutes);
 
-//fingerprint
-app.use("/api/fingerprint", fingerprintRoutes);
- 
 //education
 app.use("/api/education", education);
 
 // live chat
-const server = liveChat(app)
+const server = liveChat(app);
 
 app.get("/", (req, res) => {
   res.send("🚀 Digital Wallet API is running...");
