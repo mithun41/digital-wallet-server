@@ -7,11 +7,13 @@ const authRoutes = require("../routes/authRoutes");
 const cardRoutes = require("../routes/cardRoutes");
 const transactionRoutes = require("../routes/transactionRoutes");
 const userRoute = require("../routes/userRoute");
-const fingerprintRoutes = require("../routes/fingerprintRoutes");
 const loanRoutes = require("../routes/loanRoutes");
+const education = require("../routes/eduRoutes");
+const reportRoutes = require("../routes/reportRoutes");
 
 dotenv.config();
 const app = express();
+app.get("/favicon.ico", (req, res) => res.status(204).end());
 
 app.use(cors());
 app.use(express.json());
@@ -32,8 +34,11 @@ app.use("/api/transactions", transactionRoutes);
 // 🔹 Loan routes
 app.use("/api/loans", loanRoutes);
 
-//fingerprint
-app.use("/api/fingerprint", fingerprintRoutes);
+// report
+app.use("/api/report", reportRoutes);
+
+//education
+app.use("/api/education", education);
 
 app.get("/", (req, res) => {
   res.send("🚀 Digital Wallet API is running...");

@@ -4,7 +4,6 @@ const {
   transactionsCollection,
   cardsCollection,
 } = require("../config/collections");
-
 const { ObjectId } = require("mongodb");
 const { getClient } = require("../config/db"); // MongoDB client for session
 
@@ -82,7 +81,10 @@ const PayBill = async (req, res) => {
         transaction: transactionDoc,
       });
     });
-  } catch (err) {
+  } 
+  
+  
+  catch (err) {
     console.error("Electricity Bill Error:", err);
     res.status(400).json({ message: err.message || "Failed to pay bill" });
   } finally {
