@@ -23,6 +23,7 @@ const applyLoan = async (req, res) => {
 
     const newLoan = {
       userId: new ObjectId(req.user._id),
+      userPhone: req.user.phone || null, // <-- phone number store
       amount: Number(amount),
       duration: Number(duration),
       purpose: purpose || "",
@@ -58,8 +59,22 @@ const getUserLoans = async (req, res) => {
 const getAllLoans = async (req, res) => {
   try {
     const loans = await loansCollection();
+    const users = await usersCollection();
+
     const allLoans = await loans.find().sort({ createdAt: -1 }).toArray();
-    res.json(allLoans);
+
+    // Include user phone number in each loan
+    const loansWithPhone = await Promise.all(
+      allLoans.map(async (loan) => {
+        const user = await users.findOne({ _id: new ObjectId(loan.userId) });
+        return {
+          ...loan,
+          userPhone: user?.phone || null,
+        };
+      })
+    );
+
+    res.json(loansWithPhone);
   } catch (error) {
     console.error("Get All Loans Error:", error);
     res.status(500).json({ message: error.message });
