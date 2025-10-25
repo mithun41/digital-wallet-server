@@ -10,6 +10,7 @@ const userRoute = require("../routes/userRoute");
 const loanRoutes = require("../routes/loanRoutes");
 const education = require("../routes/eduRoutes");
 const reportRoutes = require("../routes/reportRoutes");
+const upgradeRoutes = require("../routes/upgradeRoutes");
 
 dotenv.config();
 const app = express();
@@ -39,6 +40,8 @@ app.use("/api/report", reportRoutes);
 
 //education
 app.use("/api/education", education);
+//Upgrade user
+app.use("/api", upgradeRoutes)
 
 app.get("/", (req, res) => {
   res.send("🚀 Digital Wallet API is running...");
