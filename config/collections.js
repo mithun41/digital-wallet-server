@@ -24,7 +24,10 @@ const educationCollection = async () => {
   const db = await connectDB();
   return db.collection("education");
 };
-
+const upgradeRequestsCollection = async () => {
+  const db = await connectDB();
+  return db.collection("upgradeRequests");
+};
 // ===== Add Loan Collection =====
 const loansCollection = async () => {
   const db = await connectDB();
@@ -37,5 +40,6 @@ module.exports = {
   cardsCollection,
   reportCollection,
   loansCollection,
-  educationCollection
+  educationCollection,
+  upgradeRequestsCollection
 };
