@@ -81,10 +81,7 @@ const PayBill = async (req, res) => {
         transaction: transactionDoc,
       });
     });
-  } 
-  
-  
-  catch (err) {
+  } catch (err) {
     console.error("Electricity Bill Error:", err);
     res.status(400).json({ message: err.message || "Failed to pay bill" });
   } finally {
@@ -301,8 +298,6 @@ const sendMoney = async (req, res) => {
   }
 };
 
-
-
 // ========================== SEND TO CARD ==========================
 const sendToCard = async (req, res) => {
   const client = getClient();
@@ -326,15 +321,22 @@ const sendToCard = async (req, res) => {
       const transactions = await transactionsCollection();
 
       // ================== Find sender ==================
-      const sender = await users.findOne({ _id: new ObjectId(req.user._id) }, { session });
+      const sender = await users.findOne(
+        { _id: new ObjectId(req.user._id) },
+        { session }
+      );
       if (!sender) throw new Error("Sender not found");
 
       // Password check
-      const isMatch = await bcrypt.compare(password, sender.pin || sender.password);
+      const isMatch = await bcrypt.compare(
+        password,
+        sender.pin || sender.password
+      );
       if (!isMatch) throw new Error("Invalid password");
 
       // Check balance
-      if (sender.balance < sendAmount + feeAmount) throw new Error("Insufficient balance");
+      if (sender.balance < sendAmount + feeAmount)
+        throw new Error("Insufficient balance");
 
       // Deduct from sender
       await users.updateOne(
@@ -348,10 +350,16 @@ const sendToCard = async (req, res) => {
       // ================== CARD TRANSFER ==================
       if (transferType === "card") {
         const last4 = cardNumber.slice(-4);
-        const card = await cards.findOne({ number: { $regex: `\\*?\\s*${last4}$` } }, { session });
+        const card = await cards.findOne(
+          { number: { $regex: `\\*?\\s*${last4}$` } },
+          { session }
+        );
         if (!card) throw new Error("Card not found");
 
-        const receiver = await users.findOne({ _id: new ObjectId(card.userId) }, { session });
+        const receiver = await users.findOne(
+          { _id: new ObjectId(card.userId) },
+          { session }
+        );
         if (!receiver) throw new Error("Receiver not found");
 
         // Add to receiver’s card balance
@@ -377,9 +385,7 @@ const sendToCard = async (req, res) => {
           receiverPhone: bankAccount || "N/A",
           receiverImage: null,
         };
-      }
-
-      else {
+      } else {
         throw new Error("Invalid transfer type");
       }
 
@@ -396,7 +402,8 @@ const sendToCard = async (req, res) => {
       }
 
       // ================== Save transaction ==================
-      const transactionId = "TXN-" + Date.now() + "-" + Math.floor(1000 + Math.random() * 9000);
+      const transactionId =
+        "TXN-" + Date.now() + "-" + Math.floor(1000 + Math.random() * 9000);
 
       const transactionDoc = {
         transactionId,
@@ -430,11 +437,6 @@ const sendToCard = async (req, res) => {
     await session.endSession();
   }
 };
-
-
-
-
-
 
 // ========================== CASHOUT ==========================
 const cashout = async (req, res) => {
@@ -532,7 +534,7 @@ const getTransactions = async (req, res) => {
         $or: [
           { senderPhone: userPhone },
           { receiverPhone: userPhone },
-          { type: "addMoney", userId: req.user._id }, // ✅ addMoney include
+          { type: "addMoney", userId: req.user._id },
         ],
       })
       .sort({ createdAt: -1 })
@@ -572,18 +574,41 @@ const refundTransaction = async (req, res) => {
         .status(400)
         .json({ message: "Only completed transactions can be refunded" });
 
-    // Refund amount to sender
-    await users.updateOne(
-      { phone: transaction.senderPhone },
-      { $inc: { balance: transaction.amount } }
-    );
+    // Start refund process
+    const session = await users.client.startSession();
+    session.startTransaction();
 
-    await transactions.updateOne(
-      { _id: new ObjectId(id) },
-      { $set: { status: "Refunded", updatedAt: new Date() } }
-    );
+    try {
+      // Deduct from receiver
+      await users.updateOne(
+        { phone: transaction.receiverPhone },
+        { $inc: { balance: -transaction.amount } },
+        { session }
+      );
 
-    res.json({ message: "Transaction refunded successfully" });
+      // Refund to sender
+      await users.updateOne(
+        { phone: transaction.senderPhone },
+        { $inc: { balance: transaction.amount } },
+        { session }
+      );
+
+      // Update transaction status
+      await transactions.updateOne(
+        { _id: new ObjectId(id) },
+        { $set: { status: "Refunded", updatedAt: new Date() } },
+        { session }
+      );
+
+      await session.commitTransaction();
+      session.endSession();
+
+      res.json({ message: "Transaction refunded successfully" });
+    } catch (err) {
+      await session.abortTransaction();
+      session.endSession();
+      throw err;
+    }
   } catch (err) {
     console.error(err);
     res.status(500).json({ message: "Server error" });
@@ -598,5 +623,5 @@ module.exports = {
   getAllTransactions,
   refundTransaction,
   PayBill,
-  sendToCard
+  sendToCard,
 };
