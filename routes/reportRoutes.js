@@ -1,11 +1,21 @@
 const express = require("express");
 const { protectByToken } = require("../middleware/authMiddleware");
-
 const { adminProtect } = require("../middleware/adminMiddleware");
-const { userReport } = require("../controllers/reportControllers");
+const {
+  userReport,
+  getAllReports,
+  updateReport,
+  getUserReports,
+} = require("../controllers/reportControllers");
 
 const router = express.Router();
 
-router.post("/", userReport);
+// User
+router.post("/", protectByToken, userReport);
+router.get("/my-reports", getUserReports);
+
+// Admin
+router.get("/all", getAllReports);
+router.put("/update/:id", updateReport);
 
 module.exports = router;

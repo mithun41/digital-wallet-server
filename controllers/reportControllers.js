@@ -1,16 +1,17 @@
 const { ObjectId } = require("mongodb");
 const { reportCollection } = require("../config/collections");
 
+// ================= USER CREATES REPORT =================
 const userReport = async (req, res) => {
   try {
     const { userId, name, phone, reportText, type } = req.body;
 
-    // Validate required fields
     if (!name || !phone || !reportText || !type) {
-      return res.status(400).json({ message: "Name, phone, reportText and type are required" });
+      return res
+        .status(400)
+        .json({ message: "Name, phone, reportText and type are required" });
     }
 
-    // Validate userId if provided
     let userObjectId = null;
     if (userId) {
       if (!ObjectId.isValid(userId)) {
@@ -19,28 +20,23 @@ const userReport = async (req, res) => {
       userObjectId = new ObjectId(userId);
     }
 
-    // Validate report type
     const allowedTypes = ["transaction", "login", "security", "bug", "other"];
     if (!allowedTypes.includes(type)) {
       return res.status(400).json({ message: "Invalid report type" });
     }
 
-    // Create report object
     const report = {
       name: name.trim(),
       phone: phone.trim(),
       reportText: reportText.trim(),
       type,
       status: "pending",
+      adminNote: "", // admin feedback placeholder
       createdAt: new Date(),
     };
 
-    // Include userId only if valid
-    if (userObjectId) {
-      report.userId = userObjectId;
-    }
+    if (userObjectId) report.userId = userObjectId;
 
-    // Insert into DB
     const collection = await reportCollection();
     const result = await collection.insertOne(report);
 
@@ -61,179 +57,89 @@ const userReport = async (req, res) => {
   }
 };
 
-module.exports = {
-  userReport,
+// ================= ADMIN FETCHES ALL REPORTS =================
+const getAllReports = async (req, res) => {
+  try {
+    const collection = await reportCollection();
+    const reports = await collection.find({}).sort({ createdAt: -1 }).toArray();
+
+    return res.status(200).json({
+      message: "Reports fetched successfully",
+      reports,
+    });
+  } catch (error) {
+    console.error("Error fetching reports:", error);
+    return res.status(500).json({
+      message: "Server error",
+      error: process.env.NODE_ENV === "development" ? error.message : undefined,
+    });
+  }
 };
 
+// ================= ADMIN UPDATES REPORT =================
+const updateReport = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { status, adminNote } = req.body;
 
-// const { ObjectId } = require("mongodb");
-// const { reportCollection } = require("../config/collections");
+    if (!ObjectId.isValid(id)) {
+      return res.status(400).json({ message: "Invalid report ID" });
+    }
 
-// const userReport = async (req, res) => {
-//   try {
-//     const { userId, issue, type } = req.body;
+    const collection = await reportCollection();
+    const updateFields = {};
 
-//     // Validate inputs
-//     if (!userId || !issue || !type) {
-//       return res.status(400).json({ message: "All fields are required" });
-//     }
+    if (status) updateFields.status = status;
+    if (adminNote !== undefined) updateFields.adminNote = adminNote;
 
-//     // Validate userId format
-//     if (!ObjectId.isValid(userId)) {
-//       return res.status(400).json({ message: "Invalid userId format" });
-//     }
+    const result = await collection.updateOne(
+      { _id: new ObjectId(id) },
+      { $set: updateFields }
+    );
 
-//     // Validate report type
-//     const allowedTypes = [
-//       "transaction",
-//       "login",
-//       "security",
-//       "bug",
-//       "other",
-//     ];
-//     if (!allowedTypes.includes(type)) {
-//       return res.status(400).json({ message: "Invalid report type" });
-//     }
+    if (result.modifiedCount === 0) {
+      return res
+        .status(404)
+        .json({ message: "No report found or no changes made" });
+    }
 
-//     // Create report object
-//     const report = {
-//       userId: new ObjectId(userId),
-//       issue: issue.trim(),
-//       type,
-//       status: "pending", // Added status field
-//       createdAt: new Date(),
-//     };
+    return res.status(200).json({
+      message: "Report updated successfully",
+    });
+  } catch (error) {
+    console.error("Error updating report:", error);
+    return res.status(500).json({
+      message: "Server error",
+      error: process.env.NODE_ENV === "development" ? error.message : undefined,
+    });
+  }
+};
 
-//     // Insert into database
-//     const collection = await reportCollection();
-//     const result = await collection.insertOne(report);
+// ================= USER FETCHES OWN REPORTS =================
+const getUserReports = async (req, res) => {
+  try {
+    const userId = req.user?._id;
+    if (!userId) return res.status(400).json({ message: "User not found" });
 
-//     if (result.insertedId) {
-//       return res.status(201).json({
-//         message: "Report submitted successfully",
-//         reportId: result.insertedId,
-//       });
-//     } else {
-//       return res.status(500).json({ message: "Failed to submit report" });
-//     }
-//   } catch (error) {
-//     console.error("Error submitting report:", error);
-//     return res.status(500).json({
-//       message: "Server error",
-//       error: process.env.NODE_ENV === "development" ? error.message : undefined,
-//     });
-//   }
-// };
+    const collection = await reportCollection();
+    const reports = await collection
+      .find({ userId: new ObjectId(userId) })
+      .sort({ createdAt: -1 })
+      .toArray();
 
-// module.exports = {
-//   userReport,
-// };
+    return res.status(200).json({
+      message: "User reports fetched successfully",
+      reports,
+    });
+  } catch (error) {
+    console.error("Error fetching user reports:", error);
+    return res.status(500).json({ message: "Server error" });
+  }
+};
 
-// =====================================================
-
-// const { reportCollection } = require('../config/collections'); // Destructure kore import
-// const { ObjectId } = require("mongodb");
-
-
-// const userReport = async (req, res) => {
-//   try {
-//     const { userId, issue, type } = req.body;
-
-//     // Validate input
-//     if (!userId || !issue || !type) {
-//       return res.status(400).json({ message: 'Please provide userId, issue and type' });
-//     }
-
-//     // Validate userId format
-//     if (!ObjectId.isValid(userId)) {
-//       return res.status(400).json({ message: 'Invalid userId format' });
-//     }
-
-//     // Optionally validate type against allowed values
-//     const allowedTypes = ["bug", "feature", "other"];
-//     if (!allowedTypes.includes(type)) {
-//       return res.status(400).json({ message: 'Invalid report type' });
-//     }
-
-//     const report = {
-//       userId: new ObjectId(userId),
-//       issue: issue.trim(),
-//       type, // নতুন ফিল্ড
-//       createdAt: new Date()
-//     };
-
-//     const collection = await reportCollection();
-//     const result = await collection.insertOne(report);
-
-//     if (result.insertedId) {
-//       return res.status(201).json({
-//         message: 'Report submitted successfully',
-//         reportId: result.insertedId
-//       });
-//     } else {
-//       return res.status(500).json({ message: 'Failed to submit report' });
-//     }
-//   } catch (error) {
-//     console.error('Error submitting report:', error);
-//     return res.status(500).json({
-//       message: 'Server error',
-//       error: process.env.NODE_ENV === 'development' ? error.message : undefined
-//     });
-//   }
-// };
-
-// module.exports = {
-//   userReport
-// };
-
-
-
-// const { reportCollection } = require('../config/collections'); // Destructure kore import
-// const { ObjectId } = require("mongodb");
-// const { getClient } = require("../config/db");
-
-// const userReport = async (req, res) => {
-//   try {
-//     const { userId, issue } = req.body;
-
-//     // Validate input
-//     if (!userId || !issue) {
-//       return res.status(400).json({ message: 'Please provide userId and issue' });
-//     }
-
-//     // Validate userId format
-//     if (!ObjectId.isValid(userId)) {
-//       return res.status(400).json({ message: 'Invalid userId format' });
-//     }
-
-//     // Create report object
-//     const report = {
-//       userId: new ObjectId(userId),
-//       issue: issue.trim(),
-//       createdAt: new Date()
-//     };
-
-//     // Get collection using await (IMPORTANT!)
-//     const collection = await reportCollection(); // await diye function call koro
-//     const result = await collection.insertOne(report);
-    
-//     if (result.insertedId) {
-//       return res.status(201).json({ 
-//         message: 'Report submitted successfully',
-//         reportId: result.insertedId 
-//       });
-//     } else {
-//       return res.status(500).json({ message: 'Failed to submit report' });
-//     }
-//   } catch (error) {
-//     console.error('Error submitting report:', error);
-//     return res.status(500).json({ 
-//       message: 'Server error',
-//       error: process.env.NODE_ENV === 'development' ? error.message : undefined
-//     });
-//   }
-// };
-
-// module.exports = {
-//   userReport
-// };
+module.exports = {
+  userReport,
+  getAllReports,
+  updateReport,
+  getUserReports,
+};
