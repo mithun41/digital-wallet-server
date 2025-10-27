@@ -15,7 +15,7 @@ router.post("/", protectByToken, userReport);
 router.get("/my-reports", getUserReports);
 
 // Admin
-router.get("/all", getAllReports);
-router.put("/update/:id", updateReport);
+router.get("/all", protectByToken, getAllReports);
+router.put("/update/:id", protectByToken, adminProtect, updateReport);
 
 module.exports = router;

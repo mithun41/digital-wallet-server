@@ -118,14 +118,29 @@ const updateReport = async (req, res) => {
 // ================= USER FETCHES OWN REPORTS =================
 const getUserReports = async (req, res) => {
   try {
-    const userId = req.user?._id;
-    if (!userId) return res.status(400).json({ message: "User not found" });
+    // Make sure auth middleware attached the user
+    const userId = req.user?._id || req.user?.id;
+    const userPhone = req.user?.phone;
+
+    if (!userId && !userPhone) {
+      return res
+        .status(400)
+        .json({ message: "User not found or unauthorized" });
+    }
 
     const collection = await reportCollection();
+
+    // Try to match both ID and phone (for safety, since you store phone in report)
+    const query = userId
+      ? { userId: userId.toString() } // if you stored userId as string
+      : { phone: userPhone };
+
     const reports = await collection
-      .find({ userId: new ObjectId(userId) })
+      .find(query)
       .sort({ createdAt: -1 })
       .toArray();
+
+    console.log("User Reports Found:", reports.length);
 
     return res.status(200).json({
       message: "User reports fetched successfully",
