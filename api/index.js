@@ -41,7 +41,7 @@ app.use("/api/report", reportRoutes);
 //education
 app.use("/api/education", education);
 //Upgrade user
-app.use("/api", upgradeRoutes)
+app.use("/api", upgradeRoutes);
 
 app.get("/", (req, res) => {
   res.send("🚀 Digital Wallet API is running...");
