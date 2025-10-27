@@ -11,7 +11,12 @@ const { adminProtect } = require("../middleware/adminMiddleware");
 
 // ---- User Routes ----
 router.post("/user/applyupgrade", protectByToken, applyUpgradeRequest);
-router.get("/user/upgrade-requests", protectByToken, getUpgradeRequests);
+router.get(
+  "/user/upgrade-requests",
+  protectByToken,
+  adminProtect,
+  getUpgradeRequests
+);
 
 // ---- Admin Routes ----
 router.put(
